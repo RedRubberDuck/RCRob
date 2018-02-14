@@ -2,19 +2,85 @@ import cv2,numpy,time, os
 from matplotlib import pyplot as plt
 
 x=numpy.linspace(0,2,100)
-sig=0.2;mu=1
+sig=0.3;mu=1
 gauss = numpy.exp(-numpy.power(x - mu, 2.) / (2 * numpy.power(sig, 2.)))
 kernel=gauss/numpy.sum(gauss)
 
-def histogramMethod(gray,im_bw):
+def slidingWindowMethod(im_bw,nrSlices):
     img_size=(im_bw.shape[1],im_bw.shape[0])
-    part=im_bw[int(img_size[1]*19/20):img_size[1],:]
+    for i in range(nrSlices):
+        part=im_bw[int(img_size[1]*i/nrSlices):int(img_size[1]*(i+1)/nrSlices),:]
+        # cv2.imshow('',part)
+        # cv2.waitKey()    
+        histogramMethod2(part)
+def histogramMethod2(part):
+    histogram=numpy.sum(part,axis=0)/255
+    l=len(histogram)
+    
+    histogram_f=numpy.convolve(histogram,kernel,'same')
+    maxim=max(histogram_f)
+    pp=(histogram_f+maxim*0.0)<histogram
 
+    indexes=[]
+    ind=0
+    nr=0
+    last_index=-1
+    accumulate=0
+    for i in range(1,len(pp)):
+        if pp[i] == 0 and pp[i-1] == 1:
+            
+            if accumulate < 1000 and accumulate>100:
+                p = int(ind/nr)   
+                if(last_index!=-1 and numpy.abs(last_index-p)<100):
+                    p = int((last_index+p)/2)
+                    indexes[-1] = p
+                    last_index = p
+                else:
+                    indexes.append(p)
+                last_index=p
+            accumulate=0
+            ind=0
+            nr=0
+        elif pp[i] == 1:
+            ind += i
+            nr  += 1
+            accumulate += histogram[i]
+    
+    # print(indexes)
+    pd=numpy.zeros((1,len(pp)))
+    # print(pd.shape)
+    for ii in indexes:
+        pd[0,ii] = 10
+        print(' ',ii)
+    
+    print(pd)
+    plt.figure()
+    plt.subplot(411)
+    plt.imshow(part)
+    plt.subplot(412)
+    plt.plot(histogram)
+    plt.plot(histogram_f+maxim*0.0)
+    plt.plot(histogram_f)
+    # plt.plot(pp)
+    plt.subplot(413)
+    plt.plot(pp)
+    plt.subplot(414)
+    plt.plot(pd[0,:])
+
+    plt.show()
+    
+
+    
+
+def histogramMethod(gray,im_bw,nrSlices):
+    img_size=(im_bw.shape[1],im_bw.shape[0])
+
+    part=im_bw[int(img_size[1]*19/20):img_size[1],:]
+    
     histogram=numpy.sum(part,axis=0)/255
     histogram_f=numpy.convolve(histogram,kernel,'same')
-
     maxim=max(histogram_f)
-    pp=(histogram_f+maxim*0.2)<histogram
+    pp=(histogram_f+maxim*0.3)<histogram
 
     indexes=[]
     ind=0
@@ -45,50 +111,50 @@ def histogramMethod(gray,im_bw):
 
 
 
-def slidingWindowMethod(gray,mask,indexes):
-    img_size=(gray.shape[1],gray.shape[0])
-    window_size=(200,25)
-    nrWindows=int(img_size[1]/window_size[1])
+# def slidingWindowMethod(gray,mask,indexes):
+#     img_size=(gray.shape[1],gray.shape[0])
+#     window_size=(200,25)
+#     nrWindows=int(img_size[1]/window_size[1])
 
-    #draw initial windows
-    windows_centers_out=[]
-    for index in indexes:
-        windows_centers_out.append([(index,int(img_size[1]-window_size[1]/2))]) 
+#     #draw initial windows
+#     windows_centers_out=[]
+#     for index in indexes:
+#         windows_centers_out.append([(index,int(img_size[1]-window_size[1]/2))]) 
     
-    ##Searching next windows
-    windows_centerX=indexes
-    nrFalse=numpy.zeros((1,len(indexes)))
+#     ##Searching next windows
+#     windows_centerX=indexes
+#     nrFalse=numpy.zeros((1,len(indexes)))
     
-    for i in range(1,nrWindows):
-        for win_centerI in range(len(windows_centerX)):
-            if(nrFalse[0,win_centerI]>5):
-                continue
+#     for i in range(1,nrWindows):
+#         for win_centerI in range(len(windows_centerX)):
+#             if(nrFalse[0,win_centerI]>5):
+#                 continue
 
-            win_centerX=windows_centerX[win_centerI]
-            Sum=0
-            PosAcumulate=0
-            for j in range(1,50):
-                if(win_centerX-j>=0):
-                    colSum1=numpy.sum(mask[img_size[1]-(i+1)*window_size[1]:img_size[1]-(i)*window_size[1],win_centerX-j])
-                else:
-                    colSum1=0
-                if(win_centerX+j<=img_size[0]):
-                    colSum2=numpy.sum(mask[img_size[1]-(i+1)*window_size[1]:img_size[1]-(i)*window_size[1],win_centerX+j])
-                else:
-                    colSum2=0
-                PosAcumulate+=colSum1*(win_centerX-j)+colSum2*(win_centerX+j)
-                Sum+=colSum1+colSum2
+#             win_centerX=windows_centerX[win_centerI]
+#             Sum=0
+#             PosAcumulate=0
+#             for j in range(1,50):
+#                 if(win_centerX-j>=0):
+#                     colSum1=numpy.sum(mask[img_size[1]-(i+1)*window_size[1]:img_size[1]-(i)*window_size[1],win_centerX-j])
+#                 else:
+#                     colSum1=0
+#                 if(win_centerX+j<=img_size[0]):
+#                     colSum2=numpy.sum(mask[img_size[1]-(i+1)*window_size[1]:img_size[1]-(i)*window_size[1],win_centerX+j])
+#                 else:
+#                     colSum2=0
+#                 PosAcumulate+=colSum1*(win_centerX-j)+colSum2*(win_centerX+j)
+#                 Sum+=colSum1+colSum2
             
-            if(Sum!=0):
-                windows_centerX[win_centerI]=int(PosAcumulate/Sum)
-                pos=(int(PosAcumulate/Sum),int(img_size[1]-(i+0.5)*window_size[1]))
-                windows_centers_out[win_centerI].append(pos)
-            else:
-                nrFalse[0,win_centerI]+=1
-    return windows_centers_out
+#             if(Sum!=0):
+#                 windows_centerX[win_centerI]=int(PosAcumulate/Sum)
+#                 pos=(int(PosAcumulate/Sum),int(img_size[1]-(i+0.5)*window_size[1]))
+#                 windows_centers_out[win_centerI].append(pos)
+#             else:
+#                 nrFalse[0,win_centerI]+=1
+#     return windows_centers_out
 
 def NonSlidingWindows(gray,mask):
-    
+
     return gray
 
 def drawWindows(winCenters,gray):
@@ -227,9 +293,10 @@ def main():
         gray,mask=processFrame2(frame)
 
         if(index==10):
-            indexes=histogramMethod(gray,mask)
-            winCenters=slidingWindowMethod(gray,mask,indexes)
-            gray=drawWindows(winCenters,gray)
+            slidingWindowMethod(mask,20)
+            indexes=histogramMethod(gray,mask,9)
+            # winCenters=slidingWindowMethod(gray,mask,indexes)
+            # gray=drawWindows(winCenters,gray)
         if(index>=11):
              cv2.waitKey()
              break

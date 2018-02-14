@@ -1,4 +1,4 @@
-import cv2,numpy,time
+import cv2,numpy,time, os
 from matplotlib import pyplot as plt
 
 x=numpy.linspace(0,2,100)
@@ -9,7 +9,7 @@ kernel=gauss/numpy.sum(gauss)
 def histogramMethod(gray,im_bw):
     img_size=(im_bw.shape[1],im_bw.shape[0])
     part=im_bw[int(img_size[1]*19/20):img_size[1],:]
-    # part=im_bw[0:img_size[1],:]
+
     histogram=numpy.sum(part,axis=0)/255
     histogram_f=numpy.convolve(histogram,kernel,'same')
 
@@ -37,26 +37,10 @@ def histogramMethod(gray,im_bw):
             ind += i
             nr  += 1
 
-    # print(indexes,len(pp))
     pd=numpy.zeros((1,len(pp)))
     print(pd.shape)
     for ii in indexes:
         pd[0,ii] = 1
-
-    # plt.figure()
-    # plt.subplot(411)
-    # plt.imshow(part)
-    # plt.subplot(412)
-    # plt.plot(gauss)
-    # plt.subplot(413)
-    # plt.plot(histogram_f+maxim*0.2)
-    # plt.plot(histogram_f)
-    # plt.plot(histogram)
-    # plt.subplot(414)
-    # plt.plot(pp)
-    # # plt.plot(pp_d)
-    # plt.plot(pd[0,:])
-    # plt.show()
     return indexes
 
 
@@ -64,60 +48,61 @@ def histogramMethod(gray,im_bw):
 def slidingWindowMethod(gray,mask,indexes):
     img_size=(gray.shape[1],gray.shape[0])
     window_size=(200,25)
-
     nrWindows=int(img_size[1]/window_size[1])
 
     #draw initial windows
     windows_centers_out=[]
-
     for index in indexes:
-        windows_centers_out.append([(index,int(img_size[1]-window_size[1]/2))])
-        
-        points=numpy.array([[[index-window_size[0]/2,img_size[1]-window_size[1]],
-                            [index+window_size[0]/2,img_size[1]-window_size[1]],
-                            [index+window_size[0]/2,img_size[1]],
-                            [index-window_size[0]/2,img_size[1]]
-                        ]],dtype=numpy.int32)
-        gray=cv2.polylines(gray,points,thickness=1,isClosed=True,color=(255,255,255))
-    
+        windows_centers_out.append([(index,int(img_size[1]-window_size[1]/2))]) 
     
     ##Searching next windows
     windows_centerX=indexes
-    print(len(indexes))
+    nrFalse=numpy.zeros((1,len(indexes)))
+    
     for i in range(1,nrWindows):
         for win_centerI in range(len(windows_centerX)):
+            if(nrFalse[0,win_centerI]>5):
+                continue
+
             win_centerX=windows_centerX[win_centerI]
             Sum=0
-            Pos=0
+            PosAcumulate=0
             for j in range(1,50):
-                colSum1=numpy.sum(mask[img_size[1]-(i+1)*window_size[1]:img_size[1]-(i)*window_size[1],win_centerX-j])
-                colSum2=numpy.sum(mask[img_size[1]-(i+1)*window_size[1]:img_size[1]-(i)*window_size[1],win_centerX+j])
-                # print(mask[img_size[1]-(i)*window_size[1]:img_size[1]-(i+1)*window_size[1],win_centerX-j])
-                Pos+=colSum1*(win_centerX-j)+colSum2*(win_centerX+j)
+                if(win_centerX-j>=0):
+                    colSum1=numpy.sum(mask[img_size[1]-(i+1)*window_size[1]:img_size[1]-(i)*window_size[1],win_centerX-j])
+                else:
+                    colSum1=0
+                if(win_centerX+j<=img_size[0]):
+                    colSum2=numpy.sum(mask[img_size[1]-(i+1)*window_size[1]:img_size[1]-(i)*window_size[1],win_centerX+j])
+                else:
+                    colSum2=0
+                PosAcumulate+=colSum1*(win_centerX-j)+colSum2*(win_centerX+j)
                 Sum+=colSum1+colSum2
             
             if(Sum!=0):
-                windows_centerX[win_centerI]=int(Pos/Sum)
-                #print!!!!!!!!!!!!!!!!!!!!!!!
-                points=numpy.array([[[win_centerX-window_size[0]/2,img_size[1]-(i)*window_size[1]],
-                                [win_centerX+window_size[0]/2,img_size[1]-(i)*window_size[1]],
-                                [win_centerX+window_size[0]/2,img_size[1]-(i+1)*window_size[1]],
-                                [win_centerX-window_size[0]/2,img_size[1]-(i+1)*window_size[1]]
-                                ]],dtype=numpy.int32)
-                gray=cv2.polylines(gray,points,thickness=1,isClosed=True,color=(255,255,255))
-                winNew=Pos/Sum
-                points=numpy.array([[[winNew-window_size[0]/2,img_size[1]-(i)*window_size[1]],
-                                [winNew+window_size[0]/2,img_size[1]-(i)*window_size[1]],
-                                [winNew+window_size[0]/2,img_size[1]-(i+1)*window_size[1]],
-                                [winNew-window_size[0]/2,img_size[1]-(i+1)*window_size[1]]
-                                ]],dtype=numpy.int32)
-                gray=cv2.polylines(gray,points,thickness=1,isClosed=True,color=(255,255,255))
+                windows_centerX[win_centerI]=int(PosAcumulate/Sum)
+                pos=(int(PosAcumulate/Sum),int(img_size[1]-(i+0.5)*window_size[1]))
+                windows_centers_out[win_centerI].append(pos)
+            else:
+                nrFalse[0,win_centerI]+=1
+    return windows_centers_out
 
-
-
+def NonSlidingWindows(gray,mask):
+    
     return gray
 
-
+def drawWindows(winCenters,gray):
+    window_size=(200,25)
+    for winCenterLine in winCenters:
+        for winCenter in  winCenterLine:
+            points=numpy.array([[[winCenter[0]-window_size[0]/2,winCenter[1]-window_size[1]/2],
+                                [winCenter[0]+window_size[0]/2,winCenter[1]-window_size[1]/2],
+                                [winCenter[0]+window_size[0]/2,winCenter[1]+window_size[1]/2],
+                                [winCenter[0]-window_size[0]/2,winCenter[1]+window_size[1]/2]
+                                ]],dtype=numpy.int32)
+            gray=cv2.polylines(gray,points,thickness=1,isClosed=True,color=(255,255,255))
+    
+    return gray
 
 def videoRead(fileName):
     cap = cv2.VideoCapture()
@@ -226,8 +211,8 @@ def getPerspectiveTransformationMatrix():
 
 def main():
     # inumpyutFolder='/home/nandi/Workspaces/Work/Python/opencvProject/Apps/pics/videos/'
-    inumpyutFolder='C:\\Users\\aki5clj\\Documents\\PythonWorkspace\\Rpi\\Opencv\\LineDetection\\resource\\'
-    inumpyutFileName='f_big_50_4.h264'
+    inumpyutFolder=os.path.realpath('../../resource/videos')
+    inumpyutFileName='/f_big_50_1.h264'
     frameGenerator=videoRead(inumpyutFolder+inumpyutFileName)
     start=time.time()
     rate=2
@@ -243,8 +228,9 @@ def main():
 
         if(index==10):
             indexes=histogramMethod(gray,mask)
-            gray=slidingWindowMethod(gray,mask,indexes)
-        if(index==11):
+            winCenters=slidingWindowMethod(gray,mask,indexes)
+            gray=drawWindows(winCenters,gray)
+        if(index>=11):
              cv2.waitKey()
              break
 

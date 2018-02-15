@@ -1,12 +1,196 @@
-import cv2,numpy,time
+import cv2,numpy,time, os
 from matplotlib import pyplot as plt
 
-x=numpy.linspace(0,2,100)
-sig=0.2;mu=1
+x=numpy.linspace(0,2,20)
+sig=0.4;mu=1
 gauss = numpy.exp(-numpy.power(x - mu, 2.) / (2 * numpy.power(sig, 2.)))
 kernel=gauss/numpy.sum(gauss)
 
-def histogramMethod(gray,im_bw):
+def drawLine(gray,lines):
+    nrLines=len(lines)
+    for i in range(0,nrLines-1):
+        startpoint=lines[i]
+        endPoint=lines[i+1]
+        cv2.line(gray,startpoint,endPoint,thickness=1,color=(255,255,255))
+    return gray
+
+def slidingWindowMethod(gray,mask, nrSlices):
+    #filter bog and small objects
+    
+    # nlabels, labels, stats, centroids = cv2.connectedComponentsWithStats(mask)
+    # print(nlabels)
+    
+    # for labeli in range(1,nlabels)
+
+    img_size=(mask.shape[1],mask.shape[0])
+    windowsCenterAll=[]
+    windowsCenterSlice=[]
+    for i in range(nrSlices):
+        part=mask[int(img_size[1]*i/nrSlices):int(img_size[1]*(i+1)/nrSlices),:]
+        yPos=int(img_size[1]*(i+0.5)/nrSlices)
+        windowsCenter=histogramMethod2(part,yPos)
+        windowsCenterAll+=windowsCenter
+        windowsCenterSlice.append(windowsCenter)
+
+    centers,lines=postProcessWindowCenter(windowsCenterSlice,windowsCenterAll,img_size[1]/nrSlices)
+    for line in lines:
+        gray=drawLine(gray,line)
+    gray=drawWindows(gray,windowsCenterAll,(int(mask.shape[1]*3/15),int(mask.shape[0]/15)))
+    return gray,windowsCenterAll
+
+def postProcessWindowCenter(windowsCenter,windowsCenterAll,yDistance):
+    nrCenter=len(windowsCenterAll)
+    line=[]
+    distanceLimit=100
+
+    center={}
+    for i in range(nrCenter):
+        centerI=windowsCenterAll[i]
+        minDistance=None
+        minDistanceJ=0
+        for j in range(i,nrCenter):
+            centerJ=windowsCenterAll[j]
+            if(centerI[1]==centerJ[1]):
+                continue
+            elif abs(centerI[0]-centerJ[0])<distanceLimit and abs(centerI[1]-centerJ[1])<yDistance*3 and centerI[1]<centerJ[1]:
+                distance= numpy.sqrt((centerI[0]-centerJ[0])**2 +(centerI[1]-centerJ[1])**2)
+                if minDistance is None or  minDistance>distance:
+                    minDistance=distance
+                    minDistanceJ=j
+        if minDistance!=None:
+            center[centerI]=windowsCenterAll[minDistanceJ]
+
+    centerP=center.copy()
+    lines=[]
+    currentCenter=list(centerP.keys())[0]
+    line=[currentCenter]
+    while len(centerP)!=0:
+        if currentCenter in centerP:
+            dest=centerP[currentCenter]
+            line.append(dest)
+            del centerP[currentCenter]
+            currentCenter=dest
+            
+        else:
+            lines.append(line)
+            currentCenter=list(centerP.keys())[0]
+            line=[currentCenter]
+    lines.append(line)
+    return center,lines
+
+
+def histogramMethod2(part,yPos):
+    windowscenter=[]
+    part_size=(part.shape[1],part.shape[0])
+    #Limit calculation
+    slice_size=part_size[1]*part_size[0]
+    # upper_limit=0.037037037037037035 
+    upper_limit=0.04537037037037035 
+    lower_limit=0.009259259259259259
+    upperLimitSize = slice_size*upper_limit
+    loweLimitSize = slice_size*lower_limit
+
+    #Calculating histogram
+    histogram=numpy.sum(part,axis=0)/255
+    #Filter the histogram
+    histogram_f=numpy.convolve(histogram,kernel,'same')
+
+    accumulate=0
+    startIndex=0
+    accumulatePos=0
+    for i in range(part_size[0]):
+        #The non-zero block
+        if histogram_f[i]>0:
+            accumulate+=histogram_f[i]
+            accumulatePos+=histogram_f[i]*i
+            #Start the non-zero block
+            if histogram_f[i-1]==0:
+                startIndex=i
+        # The end of a non-zero block
+        elif histogram_f[i]==0 and histogram_f[i-1]>0:
+            if accumulate<upperLimitSize and accumulate>loweLimitSize:
+                #Calculating the middle of the non-zero block
+                indexP=int((startIndex+i)/2)
+                indexAA=int(accumulatePos/accumulate)
+                indexP=indexAA
+                # print(indexP,' ',indexAA)
+                #Verify the distance from the last non-zeros block
+                if (len(windowscenter)>0 and abs(windowscenter[-1][0]-indexP)<100):
+                    #If the distance is smaller than the threshold, then combines it.
+                    indexP=int((windowscenter[-1][0]+indexP)/2)
+                    windowscenter[-1]=(indexP,windowscenter[-1][1])
+                else:
+                    # Add to the list of the windowsCenters
+                    windowscenter.append((int((startIndex+i)/2),yPos))
+            accumulate=0
+            accumulatePos=0
+    return windowscenter
+
+def drawWindows(gray,windowsCenter,windowSize):
+
+    for center in windowsCenter:
+        points=numpy.array([[[center[0]-windowSize[0]/2,center[1]-windowSize[1]/2],
+                            [center[0]+windowSize[0]/2,center[1]-windowSize[1]/2],
+                            [center[0]+windowSize[0]/2,center[1]+windowSize[1]/2],
+                            [center[0]-windowSize[0]/2,center[1]+windowSize[1]/2]]],dtype=numpy.int32)
+        gray=cv2.polylines(gray,points,thickness=1,isClosed=True,color=(255,255,255))
+    return gray
+
+
+def histogramMethod(part):
+    part_size=(part.shape[1],part.shape[0])
+    histogram=numpy.sum(part,axis=0)/255
+    histogram_f=numpy.convolve(histogram,kernel,'same')
+
+    maxim=max(histogram_f)
+    pp=(histogram_f+maxim*0.1)<histogram
+
+    indexes=[]
+    ind=0
+    nr=0
+    last_index=-1
+    for i in range(1,len(pp)):
+        if pp[i] == 0 and pp[i-1] == 1:
+            p = int(ind/nr)
+            if(last_index!=-1 and numpy.abs(last_index-p)<100):
+                p=int((last_index+p)/2)
+                indexes[-1]=p
+                last_index=p
+            else:
+                indexes.append(p)
+            
+            ind=0
+            nr=0
+            last_index=p
+        elif pp[i] == 1:
+            ind += i
+            nr  += 1
+    
+    pd=numpy.zeros((1,len(pp)))
+    print(pd.shape)
+    for ii in indexes:
+        pd[0,ii] = 1
+    
+
+    plt.figure()
+    plt.subplot(411)
+    plt.imshow(part)
+    plt.subplot(412)
+    plt.plot(gauss)
+    plt.subplot(413)
+    plt.plot(histogram_f+maxim*0.1)
+    plt.plot(histogram_f)
+    plt.plot(histogram)
+    plt.subplot(414)
+    plt.plot(pp)
+    # plt.plot(pp_d)
+    plt.plot(pd[0,:])
+    plt.show()
+    
+
+
+
+def histogramMethodOLD(gray,im_bw):
     img_size=(im_bw.shape[1],im_bw.shape[0])
     part=im_bw[int(img_size[1]*19/20):img_size[1],:]
     # part=im_bw[0:img_size[1],:]
@@ -61,61 +245,61 @@ def histogramMethod(gray,im_bw):
 
 
 
-def slidingWindowMethod(gray,mask,indexes):
-    img_size=(gray.shape[1],gray.shape[0])
-    window_size=(200,25)
+# def slidingWindowMethod(gray,mask,indexes):
+#     img_size=(gray.shape[1],gray.shape[0])
+#     window_size=(200,25)
 
-    nrWindows=int(img_size[1]/window_size[1])
+#     nrWindows=int(img_size[1]/window_size[1])
 
-    #draw initial windows
-    windows_centers_out=[]
+#     #draw initial windows
+#     windows_centers_out=[]
 
-    for index in indexes:
-        windows_centers_out.append([(index,int(img_size[1]-window_size[1]/2))])
+#     for index in indexes:
+#         windows_centers_out.append([(index,int(img_size[1]-window_size[1]/2))])
         
-        points=numpy.array([[[index-window_size[0]/2,img_size[1]-window_size[1]],
-                            [index+window_size[0]/2,img_size[1]-window_size[1]],
-                            [index+window_size[0]/2,img_size[1]],
-                            [index-window_size[0]/2,img_size[1]]
-                        ]],dtype=numpy.int32)
-        gray=cv2.polylines(gray,points,thickness=1,isClosed=True,color=(255,255,255))
+#         points=numpy.array([[[index-window_size[0]/2,img_size[1]-window_size[1]],
+#                             [index+window_size[0]/2,img_size[1]-window_size[1]],
+#                             [index+window_size[0]/2,img_size[1]],
+#                             [index-window_size[0]/2,img_size[1]]
+#                         ]],dtype=numpy.int32)
+#         gray=cv2.polylines(gray,points,thickness=1,isClosed=True,color=(255,255,255))
     
     
-    ##Searching next windows
-    windows_centerX=indexes
-    print(len(indexes))
-    for i in range(1,nrWindows):
-        for win_centerI in range(len(windows_centerX)):
-            win_centerX=windows_centerX[win_centerI]
-            Sum=0
-            Pos=0
-            for j in range(1,50):
-                colSum1=numpy.sum(mask[img_size[1]-(i+1)*window_size[1]:img_size[1]-(i)*window_size[1],win_centerX-j])
-                colSum2=numpy.sum(mask[img_size[1]-(i+1)*window_size[1]:img_size[1]-(i)*window_size[1],win_centerX+j])
-                # print(mask[img_size[1]-(i)*window_size[1]:img_size[1]-(i+1)*window_size[1],win_centerX-j])
-                Pos+=colSum1*(win_centerX-j)+colSum2*(win_centerX+j)
-                Sum+=colSum1+colSum2
+#     ##Searching next windows
+#     windows_centerX=indexes
+#     print(len(indexes))
+#     for i in range(1,nrWindows):
+#         for win_centerI in range(len(windows_centerX)):
+#             win_centerX=windows_centerX[win_centerI]
+#             Sum=0
+#             Pos=0
+#             for j in range(1,50):
+#                 colSum1=numpy.sum(mask[img_size[1]-(i+1)*window_size[1]:img_size[1]-(i)*window_size[1],win_centerX-j])
+#                 colSum2=numpy.sum(mask[img_size[1]-(i+1)*window_size[1]:img_size[1]-(i)*window_size[1],win_centerX+j])
+#                 # print(mask[img_size[1]-(i)*window_size[1]:img_size[1]-(i+1)*window_size[1],win_centerX-j])
+#                 Pos+=colSum1*(win_centerX-j)+colSum2*(win_centerX+j)
+#                 Sum+=colSum1+colSum2
             
-            if(Sum!=0):
-                windows_centerX[win_centerI]=int(Pos/Sum)
-                #print!!!!!!!!!!!!!!!!!!!!!!!
-                points=numpy.array([[[win_centerX-window_size[0]/2,img_size[1]-(i)*window_size[1]],
-                                [win_centerX+window_size[0]/2,img_size[1]-(i)*window_size[1]],
-                                [win_centerX+window_size[0]/2,img_size[1]-(i+1)*window_size[1]],
-                                [win_centerX-window_size[0]/2,img_size[1]-(i+1)*window_size[1]]
-                                ]],dtype=numpy.int32)
-                gray=cv2.polylines(gray,points,thickness=1,isClosed=True,color=(255,255,255))
-                winNew=Pos/Sum
-                points=numpy.array([[[winNew-window_size[0]/2,img_size[1]-(i)*window_size[1]],
-                                [winNew+window_size[0]/2,img_size[1]-(i)*window_size[1]],
-                                [winNew+window_size[0]/2,img_size[1]-(i+1)*window_size[1]],
-                                [winNew-window_size[0]/2,img_size[1]-(i+1)*window_size[1]]
-                                ]],dtype=numpy.int32)
-                gray=cv2.polylines(gray,points,thickness=1,isClosed=True,color=(255,255,255))
+#             if(Sum!=0):
+#                 windows_centerX[win_centerI]=int(Pos/Sum)
+#                 #print!!!!!!!!!!!!!!!!!!!!!!!
+#                 points=numpy.array([[[win_centerX-window_size[0]/2,img_size[1]-(i)*window_size[1]],
+#                                 [win_centerX+window_size[0]/2,img_size[1]-(i)*window_size[1]],
+#                                 [win_centerX+window_size[0]/2,img_size[1]-(i+1)*window_size[1]],
+#                                 [win_centerX-window_size[0]/2,img_size[1]-(i+1)*window_size[1]]
+#                                 ]],dtype=numpy.int32)
+#                 gray=cv2.polylines(gray,points,thickness=1,isClosed=True,color=(255,255,255))
+#                 winNew=Pos/Sum
+#                 points=numpy.array([[[winNew-window_size[0]/2,img_size[1]-(i)*window_size[1]],
+#                                 [winNew+window_size[0]/2,img_size[1]-(i)*window_size[1]],
+#                                 [winNew+window_size[0]/2,img_size[1]-(i+1)*window_size[1]],
+#                                 [winNew-window_size[0]/2,img_size[1]-(i+1)*window_size[1]]
+#                                 ]],dtype=numpy.int32)
+#                 gray=cv2.polylines(gray,points,thickness=1,isClosed=True,color=(255,255,255))
 
 
 
-    return gray
+#     return gray
 
 
 
@@ -226,9 +410,11 @@ def getPerspectiveTransformationMatrix():
 
 def main():
     # inumpyutFolder='/home/nandi/Workspaces/Work/Python/opencvProject/Apps/pics/videos/'
-    inumpyutFolder='C:\\Users\\aki5clj\\Documents\\PythonWorkspace\\Rpi\\Opencv\\LineDetection\\resource\\'
-    inumpyutFileName='f_big_50_4.h264'
-    frameGenerator=videoRead(inumpyutFolder+inumpyutFileName)
+    # inumpyutFolder='C:\\Users\\aki5clj\\Documents\\PythonWorkspace\\Rpi\\Opencv\\LineDetection\\resource\\'
+    inputFolder= os.path.realpath('../../resource/videos')
+    inputFileName='\\f_big_50_4.h264'
+    print(inputFolder+inputFileName)
+    frameGenerator=videoRead(inputFolder+inputFileName)
     start=time.time()
     rate=2
     index=0
@@ -242,8 +428,11 @@ def main():
         gray,mask=processFrame2(frame)
 
         if(index==10):
-            indexes=histogramMethod(gray,mask)
-            gray=slidingWindowMethod(gray,mask,indexes)
+            nrSlices=15
+            gray,windowsCenter=slidingWindowMethod(gray,mask,nrSlices)
+            
+            # indexes=histogramMethod(gray,mask)
+            # gray=slidingWindowMethod(gray,mask,indexes)
         if(index==11):
              cv2.waitKey()
              break

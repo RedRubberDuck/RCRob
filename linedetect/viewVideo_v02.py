@@ -44,56 +44,70 @@ def slidingWindowMethod(gray,mask, nrSlices):
         windowsCenter=histogramMethod2(part,yPos)
         windowsCenterAll+=windowsCenter
         windowsCenterSlice.append(windowsCenter)
-
-    centers,lines=postProcessWindowCenter(windowsCenterSlice,windowsCenterAll,img_size[1]/nrSlices)
-    # for line in lines:
-    #     gray=drawLine(gray,line)
-    gray=drawLine(gray,lines[2])
+    lines=postProcessWindowCenter(windowsCenterSlice,windowsCenterAll,img_size[1]/nrSlices)
+    for line in lines:
+        gray=drawLine(gray,line)
+    # gray=drawLine(gray,lines[2])
     gray=drawWindows(gray,windowsCenterAll,(int(mask.shape[1]*3/15),int(mask.shape[0]/15)))
     return gray,lines
 
 def postProcessWindowCenter(windowsCenter,windowsCenterAll,yDistance):
     nrCenter=len(windowsCenterAll)
     line=[]
-    distanceLimit=200
+    maxXdistance=150
+    maxYDistance=yDistance*3
 
-    center={}
+    listIdsCenter=[None]*nrCenter
+    lines2=[]
     for i in range(nrCenter):
         centerI=windowsCenterAll[i]
         minDistance=None
         minDistanceJ=0
+        # Compare with the other points. 
         for j in range(i,nrCenter):
             centerJ=windowsCenterAll[j]
+            # If the two point is the same line, they cannot be connected
             if(centerI[1]==centerJ[1]):
                 continue
-            elif abs(centerI[0]-centerJ[0])<distanceLimit and abs(centerI[1]-centerJ[1])<yDistance*3 and centerI[1]<centerJ[1]:
+            # If the vertical and horizontal distance is smaller than the limits, then we search the nearest point. 
+            elif abs(centerI[0]-centerJ[0])<maxXdistance and abs(centerI[1]-centerJ[1])<maxYDistance and centerI[1]<centerJ[1]:
                 distance= np.sqrt((centerI[0]-centerJ[0])**2 +(centerI[1]-centerJ[1])**2)
                 if minDistance is None or  minDistance>distance:
                     minDistance=distance
                     minDistanceJ=j
-        if minDistance!=None:
-            center[centerI]=windowsCenterAll[minDistanceJ]
-    print(sorted(center))
-    centerP=center.copy()
-    
-    lines=[]
-    currentCenter=list(centerP.keys())[0]
-    line=[currentCenter]
-    while len(centerP)!=0:
-        if currentCenter in centerP:
-            dest=centerP[currentCenter]
-            line.append(dest)
-            del centerP[currentCenter]
-            currentCenter=dest
+        # Verifying the nearest point existance, it means the two point can be connected. 
+        if minDistance is not None:
+            #Verifying the point is a part of the line
+            # The examined point is the start point of a new line
+            if(listIdsCenter[i] is None):
+                #Getting the new line ID
+                lineId=len(lines2)
+                # Setting the ID in the id and point table
+                listIdsCenter[i]=lineId
+                listIdsCenter[minDistanceJ]=lineId
+                #Creating the new line, as a point container array 
+                line=[centerI]
+                #Adding to the list of the line 
+                lines2.append(line)
+            # The examined point is a part of the line
+            else:
+                # Getting the line ID
+                lineId=listIdsCenter[i]
+                # Getting the line 
+                line=lines2[lineId]
+                # Adding the new point to the line
+                line.append(centerI)
+                # Setting the line ID for the new point in the table 
+                listIdsCenter[minDistanceJ]=lineId
+        # If the point hasn't neighbor point.
+        # It takes a part of the line, as a final point 
+        elif (listIdsCenter[i] is not None):
+            #Final point of a line
+            lineId=listIdsCenter[i]
+            line=lines2[lineId]
+            line.append(centerI)
         
-        else:
-            # print(currentCenter,centerP)
-            lines.append(line)
-            currentCenter=list(centerP.keys())[0]
-            line=[currentCenter]
-    lines.append(line)
-    print(line)
-    return center,lines
+    return lines2
 
 
 def histogramMethod2(part,yPos):
@@ -138,39 +152,65 @@ def histogramMethod2(part,yPos):
     
     return windowscenter
 
+def windowClip(im,pos,windowSize):
+    img_size=(im.shape[1],im.shape[0])
+    startX=int(pos[0]-windowSize[0]/2)
+    endX=int(pos[0]+windowSize[0]/2)
+    if(startX<0):
+        startX=0
+    if(endX>=img_size[0]):
+        endX=img_size[0]-1
+
+    startY=int(pos[1]-windowSize[1]/2)
+    endY=int(pos[1]+windowSize[1]/2)
+    if(startY < 0 ):
+        startY=0
+    if(endY >=img_size[1]):
+        endY=img_size[1]-1
+    window=im[startY:endY,startX:endX]
+    return window,startX
 
 def nonslidingWindowMethod(mask,linesCenterPos,windowSize):
     img_size=(mask.shape[1],mask.shape[0])
-#     window_size=(200,25)
+    #Preprocessing each line to add new points, when the first point of the line is not in the first slice and the last point of the line is not in the last slice 
+    nrSliceInImg=int(img_size[1]/windowSize[1])
+    for line in linesCenterPos:
+        firstPoint=line[0]
+        lineFirstPoint=int(firstPoint[1]/windowSize[1])
+        if (lineFirstPoint>0):
+            newPoint=(firstPoint[0],firstPoint[1]-windowSize[1])
+            line.insert(0,newPoint)
+        lastPoint=line[-1]
+        lineLastPoint=int(firstPoint[1]/windowSize[1])
+        if (lineLastPoint<nrSliceInImg-1):
+            newPoint=(lastPoint[0],lastPoint[1]+windowSize[1])
+            line.append(newPoint)
+        
+
     
-    print(len(linesCenterPos))
+    
+    # Processing each lines
     for line in linesCenterPos:
         nrPoint=len(line)
-        lineCopy=line.copy()
-        itgen =( (i,lineCopy[i]) for i in range(nrPoint))
-        removed=0
-        for i,pos in itgen:
-            startX=int(pos[0]-windowSize[0]/2)
-            endX=int(pos[0]+windowSize[0]/2)
-            if(startX<0):
-                startX=0
-            if(endX>=img_size[0]):
-                endX=img_size[0]-1
+        nrRemovedPoint=0
+        for i in range(nrPoint):
+            pos=line[i-nrRemovedPoint]
             
-            window=mask[int(pos[1]-windowSize[1]/2):int(pos[1]+windowSize[1]/2),startX:endX]
-            sumWhite=np.sum(window,axis=0)
-            sumNrWhite=np.sum(sumWhite)
-            accumulate=0
-            for j in range(len(sumWhite)):
-                accumulate += j *sumWhite[j]
-            if sumNrWhite>0:
-                posX=accumulate/sumNrWhite
+            window,startX=windowClip(mask,pos,windowSize)
+            sumWhiteX=np.sum(window,axis=0)
+            sumTotalWhite=np.sum(sumWhiteX)
+            if sumTotalWhite>0:
+                posX=np.average(range(len(sumWhiteX)),weights=sumWhiteX)    
                 pos=(int(startX+posX),pos[1])
-                line[i-removed]=pos
+                line[i-nrRemovedPoint]=pos
             else:
                 s=0
-                removed+=1
+                nrRemovedPoint+=1
                 line.remove(pos)
+        #  Verify number of point in the line 
+        if len(line) == 0:
+            # The line disappeared
+            linesCenterPos.remove(line)
 
     return linesCenterPos
                 
@@ -215,6 +255,24 @@ def processFrame2(frame):
 
     return gray,mask
 
+def processFrame5(frame):
+    img_size=(frame.shape[1],frame.shape[0])
+    clahe = cv2.createCLAHE(clipLimit=1.0, tileGridSize=(7,7))
+
+    lower_gray_bgr = np.uint8([[[118,118,118]]])
+    lower_gray_ = cv2.cvtColor(lower_gray_bgr,cv2.COLOR_BGR2YCrCb)
+
+    high_gray_bgr = np.uint8([[[255,255,255]]])
+    high_gray_ = cv2.cvtColor(high_gray_bgr,cv2.COLOR_BGR2YCrCb)
+
+    ycrcb = cv2.cvtColor(frame,cv2.COLOR_BGR2YCrCb)
+    mask = cv2.inRange(ycrcb, lower_gray_ ,high_gray_)
+
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    gray = cv2.bitwise_and(gray,gray,mask = mask)
+
+    return gray,mask
+
 
 def getPerspectiveTransformationMatrix():
     corners_pics = np.float32([
@@ -236,7 +294,7 @@ def main():
     # inputFolder='/home/nandi/Workspaces/Work/Python/opencvProject/Apps/pics/videos/'
     # inputFolder='C:\\Users\\aki5clj\\Documents\\PythonWorkspace\\Rpi\\Opencv\\LineDetection\\resource\\'
     inputFolder= os.path.realpath('../../resource/videos')
-    inputFileName='/f_big_50_2.h264'
+    inputFileName='/move14.h264'
     print(inputFolder+inputFileName)
     frameGenerator=videoRead(inputFolder+inputFileName)
     start=time.time()
@@ -248,17 +306,15 @@ def main():
     
     lines=[]
     index=0
+    nrSlices=15
     for frame,durationTime in frameGenerator:
         frame = cv2.warpPerspective(frame,M,newsize)
-        gray,mask=processFrame2(frame)
+        gray,mask=processFrame5(frame)
 
         if(index==10):
-            nrSlices=15
             gray,lines=slidingWindowMethod(gray,mask,nrSlices)
         if(index>=11):
-            cv2.waitKey()
-            break
-            windowSize=(int(mask.shape[1]*3/15),int(mask.shape[0]/15))
+            windowSize=(int(mask.shape[1]*3/nrSlices),int(mask.shape[0]/nrSlices))
             lines=nonslidingWindowMethod(mask,lines,windowSize)
             for line in lines:
                 gray=drawLine(gray,line)

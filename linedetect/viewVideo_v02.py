@@ -1,6 +1,7 @@
 import cv2, time, os
 from matplotlib import pyplot as plt
 import numpy as np
+import time 
 
 x=np.linspace(0,2,20)
 sig=0.4;mu=1
@@ -44,12 +45,41 @@ def slidingWindowMethod(gray,mask, nrSlices):
         windowsCenter=histogramMethod2(part,yPos)
         windowsCenterAll+=windowsCenter
         windowsCenterSlice.append(windowsCenter)
+    windowsCenterAll=correlation(mask,windowsCenterAll,(int(mask.shape[1]*3/15),int(mask.shape[0]/15)))
     lines=postProcessWindowCenter(windowsCenterSlice,windowsCenterAll,img_size[1]/nrSlices)
     for line in lines:
         gray=drawLine(gray,line)
     # gray=drawLine(gray,lines[2])
     gray=drawWindows(gray,windowsCenterAll,(int(mask.shape[1]*3/15),int(mask.shape[0]/15)))
     return gray,lines
+
+
+def correlation(mask,centers,windowSize):
+    newCenters=[]
+    img_size=(mask.shape[1],mask.shape[0])
+    for center in centers:
+        limitsY=np.array([center[1]-windowSize[1]/2,center[1]+windowSize[1]/2],dtype=np.int32)
+        limitsX=np.array([center[0]-windowSize[0]/2,center[0]+windowSize[0]/2],dtype=np.int32)
+
+        limitsX=np.clip(limitsX,0,img_size[0])
+        limitsY=np.clip(limitsY,0,img_size[1])
+        part=mask[limitsY[0]:limitsY[1],limitsX[0]:limitsX[1]]
+        part_size=(part.shape[1],part.shape[0])
+
+        Y,X=np.nonzero(part)
+
+        StdX=np.std(X)
+        StdY=np.std(Y)
+
+        corrCoef=np.corrcoef(Y,X)
+
+        
+        if (np.abs(corrCoef[0,1])>0.75):
+            newCenters.append(center)
+        elif ((StdX<10 and StdY>part_size[1]*0.2) ):
+            newCenters.append(center)
+    return newCenters
+
 
 def postProcessWindowCenter(windowsCenter,windowsCenterAll,yDistance):
     nrCenter=len(windowsCenterAll)
@@ -110,7 +140,11 @@ def postProcessWindowCenter(windowsCenter,windowsCenterAll,yDistance):
     return lines2
 
 
+
 def histogramMethod2(part,yPos):
+    part1 = cv2.GaussianBlur(part,(91,21),10)
+    # part1 = cv2.blur(part,(61,1),0)
+
     windowscenter=[]
     part_size=(part.shape[1],part.shape[0])
     #Limit calculation
@@ -122,22 +156,33 @@ def histogramMethod2(part,yPos):
     loweLimitSize = slice_size*lower_limit
 
     #Calculating histogram
-    histogram=np.sum(part,axis=0)/255
+    histogram=np.sum(part1,axis=0)/255
+
+    Mean=np.sum(histogram)/len(histogram)
+
     #Filter the histogram
+    # kernel =  np.ones((1,41))/41
+    kernel =  (np.ones((1,65))/65)[0,:]
     histogram_f=np.convolve(histogram,kernel,'same')
+    # histogram_f = histogram
 
     accumulate=0
     accumulatePos=0
+    accumulate_a = [] 
     for i in range(part_size[0]):
         #The non-zero block
         if histogram_f[i]>0:
             accumulate+=histogram_f[i]
             accumulatePos+=histogram_f[i]*i
+            accumulate_a.append(accumulate)
         # The end of a non-zero block
         elif histogram_f[i]==0 and histogram_f[i-1]>0:
+            
             if accumulate<upperLimitSize and accumulate>loweLimitSize:
                 #Calculating the middle of the non-zero block
                 indexP=int(accumulatePos/accumulate)
+                
+
                 # print(indexP,' ',indexAA)
                 #Verify the distance from the last non-zeros block
                 if (len(windowscenter)>0 and abs(windowscenter[-1][0]-indexP)<100):
@@ -149,6 +194,121 @@ def histogramMethod2(part,yPos):
                     windowscenter.append((indexP,yPos))
             accumulate=0
             accumulatePos=0
+            accumulate_a.append(0)
+        else:
+            accumulate_a.append(0)
+            
+    return windowscenter
+    # nrSubplot=4
+    # plt.figure()
+    # plt.subplot(nrSubplot,1,1)
+    # plt.imshow(part)
+    # plt.subplot(nrSubplot,1,2)
+    # plt.imshow(part1)
+    # plt.subplot(nrSubplot,1,3)
+    # plt.plot(histogram)
+    # plt.plot(histogram_f+Mean)
+    # plt.subplot(nrSubplot,1,4)
+    # plt.plot(accumulate_a)
+    # plt.show()
+
+
+def histogramMethod3(part,yPos):
+    part1=part
+    # part1 = cv2.GaussianBlur(part,(41,21),5)
+    # part1 = cv2.blur(part,(91,1),0)
+
+    windowscenter=[]
+    part_size=(part.shape[1],part.shape[0])
+    #Limit calculation
+    slice_size=part_size[1]*part_size[0]
+    # upper_limit=0.035
+    # upper_limit=0.04537037037037035 
+    upper_limit=0.037037037037037035 
+    lower_limit=0.0075
+    upperLimitSize = slice_size*upper_limit
+    loweLimitSize = slice_size*lower_limit
+
+    #Calculating histogram
+    histogram=np.sum(part1,axis=0)/255
+    Mean=np.sum(histogram)/len(histogram)
+
+    #Filter the histogram
+    # kernel =  np.ones((1,41))/41
+    # 61
+    # kernel =  (np.ones((1,21))/21)[0,:]
+    histogram_f=np.convolve(histogram,kernel,'same')
+    histogram_fd=histogram_f+Mean
+
+    bigger = histogram>histogram_fd
+
+    
+    # histogram_f = histogram
+
+    accumulate=0
+    accumulatePos=0
+    accumulate_a = [] 
+    spike=False
+    startedZero=False
+    for i in range(part_size[0]):
+        # if (i==part_size[0]-1) and histogram[i]<10:
+        #     histogram[i]=0
+
+        #The non-zero block
+        if histogram[i]>5:
+            accumulate+=histogram[i]
+            accumulatePos+=histogram[i]*i
+            accumulate_a.append(accumulate)
+            if(bigger[i]>=1):
+                spike=True
+        # The end of a non-zero block
+        elif (histogram[i]<=5 and histogram[i-1]>5) :
+            # if (i==part_size[0]-2 and histogram[i]<50):
+            #     print(accumulate)
+            if accumulate<upperLimitSize and accumulate>loweLimitSize and spike and startedZero:
+                #Calculating the middle of the non-zero block
+                indexP=int(accumulatePos/accumulate)
+                #Verify the distance from the last non-zeros block
+                if (len(windowscenter)>0 and abs(windowscenter[-1][0]-indexP)<50):
+                    #If the distance is smaller than the threshold, then combines it.
+                    indexP=int((windowscenter[-1][0]+indexP)/2)
+                    windowscenter[-1]=(indexP,windowscenter[-1][1])
+                else:
+                    # Add to the list of the windowsCenters
+                    windowscenter.append((indexP,yPos))
+            accumulate=0
+            accumulatePos=0
+            accumulate_a.append(0)
+            spike=False
+            startedZero=True
+        else:
+            startedZero=True
+            accumulate_a.append(0)
+
+    
+    upper_A=(np.ones((1,len(histogram)))*upperLimitSize)[0,:]
+    lower_A=(np.ones((1,len(histogram)))*loweLimitSize)[0,:]
+
+
+    nrSubPlot=5
+    plt.figure()
+    plt.subplot(nrSubPlot,1,1)
+    plt.imshow(part)
+    plt.subplot(nrSubPlot,1,2)
+    plt.imshow(part1)
+    plt.subplot(nrSubPlot,1,3)
+    plt.plot(histogram)
+    plt.plot(histogram_fd)
+    plt.subplot(nrSubPlot,1,4)
+    plt.plot(upper_A)
+    plt.plot(lower_A)
+    plt.plot(accumulate_a)
+    plt.subplot(nrSubPlot,1,5)
+    plt.plot(bigger)
+    plt.show()
+
+
+
     
     return windowscenter
 
@@ -186,8 +346,6 @@ def nonslidingWindowMethod(mask,linesCenterPos,windowSize):
             newPoint=(lastPoint[0],lastPoint[1]+windowSize[1])
             line.append(newPoint)
         
-
-    
     
     # Processing each lines
     for line in linesCenterPos:
@@ -255,6 +413,36 @@ def processFrame2(frame):
 
     return gray,mask
 
+
+
+def processFrame3(frame):
+    img_size=(frame.shape[1],frame.shape[0])
+
+    hsv=cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+    gray = cv2.cvtColor(frame,cv2.COLOR_BGR2GRAY)
+    # grayF = cv2.GaussianBlur(gray,(151,151),0)
+    # grayF = cv2.blur(gray,(151,151),0)
+    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
+    # hsv[:,:,1] = clahe.apply(hsv[:,:,1])
+    hsv[:,:,2] = clahe.apply(hsv[:,:,2])
+    hsv[:,:,2] = cv2.GaussianBlur(hsv[:,:,2],(11,11),0)
+
+    v=cv2.blur(hsv[:,:,2],(71,71),0)
+    grayFR = cv2.inRange(v, 160 ,255)
+    grayFR_inv   = cv2.bitwise_not(grayFR)
+
+
+    lower_white = np.array([0,0,180], dtype=np.uint8)
+    upper_white = np.array([255,80,255], dtype=np.uint8)
+    # #---------------------------------------------------------------------------
+
+    mask = cv2.inRange(hsv, lower_white, upper_white)
+    mask   = cv2.bitwise_and(mask,grayFR_inv)
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    gray = cv2.bitwise_and(gray,gray,mask = mask)
+
+    return gray,mask
+
 def processFrame5(frame):
     img_size=(frame.shape[1],frame.shape[0])
     clahe = cv2.createCLAHE(clipLimit=1.0, tileGridSize=(7,7))
@@ -294,7 +482,8 @@ def main():
     # inputFolder='/home/nandi/Workspaces/Work/Python/opencvProject/Apps/pics/videos/'
     # inputFolder='C:\\Users\\aki5clj\\Documents\\PythonWorkspace\\Rpi\\Opencv\\LineDetection\\resource\\'
     inputFolder= os.path.realpath('../../resource/videos')
-    inputFileName='/move14.h264'
+    inputFileName='/newRecord/move20.h264'
+    # inputFileName = '/f_big_50_4.h1264'
     print(inputFolder+inputFileName)
     frameGenerator=videoRead(inputFolder+inputFileName)
     start=time.time()
@@ -309,21 +498,27 @@ def main():
     nrSlices=15
     for frame,durationTime in frameGenerator:
         frame = cv2.warpPerspective(frame,M,newsize)
-        gray,mask=processFrame5(frame)
+        # frame = cv2.GaussianBlur(frame,(3,3),10)
+        # gray,mask=processFrame2(frame)
+        gray,mask=processFrame3(frame)
 
-        if(index==10):
-            gray,lines=slidingWindowMethod(gray,mask,nrSlices)
-        if(index>=11):
-            windowSize=(int(mask.shape[1]*3/nrSlices),int(mask.shape[0]/nrSlices))
-            lines=nonslidingWindowMethod(mask,lines,windowSize)
-            for line in lines:
-                gray=drawLine(gray,line)
-                gray=drawWindows(gray,line,windowSize)
-            cv2.waitKey()
-            
-        if(index>100):
+        if(index>=100):
             break
 
+        
+        if(index>=10):
+            gray,lines=slidingWindowMethod(gray,mask,nrSlices)
+            
+        
+        # if(index>=11):
+        #     windowSize=(int(mask.shape[1]*3/nrSlices),int(mask.shape[0]/nrSlices))
+        #     lines=nonslidingWindowMethod(mask,lines,windowSize)
+        #     for line in lines:
+        #         gray=drawLine(gray,line)
+        #         gray=drawWindows(gray,line,windowSize)
+        #     cv2.waitKey()
+            
+        
         gray=cv2.resize(gray,(int(gray.shape[1]/rate),int(gray.shape[0]/rate)))
         frame = cv2.resize(frame,(int(frame.shape[1]/rate),int(frame.shape[0]/rate)))
         mask = cv2.resize(mask,(int(mask.shape[1]/rate),int(mask.shape[0]/rate)))
@@ -334,7 +529,8 @@ def main():
         vis = np.concatenate((frame,mask,gray), axis=1)
 
         cv2.imshow('',vis)
-        cv2.waitKey(durationTime)
+        cv2.waitKey()
+        # cv2.waitKey(durationTime)
 
         index+=1
     end=time.time()

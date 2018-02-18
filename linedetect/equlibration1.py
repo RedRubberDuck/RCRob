@@ -83,7 +83,7 @@ def getPerspectiveTransformationMatrix():
 
 def convertImage(img,rate):
     img = cv2.resize(img,(int(img.shape[1]/rate),int(img.shape[0]/rate)))
-    img = cv2.applyColorMap(img,cv2.COLORMAP_BONE)
+    # img = cv2.applyColorMap(img,cv2.COLORMAP_BONE)
     return img    
 
 
@@ -92,7 +92,7 @@ def main():
     # inputFolder='/home/nandi/Workspaces/Work/Python/opencvProject/Apps/pics/videos/'
     # inputFolder='C:\\Users\\aki5clj\\Documents\\PythonWorkspace\\Rpi\\Opencv\\LineDetection\\resource\\'
     inputFolder= os.path.realpath('../../resource/videos')
-    inputFileName='/newRecord/move1.h264'
+    inputFileName='/newRecord/move14.h264'
     print(inputFolder+inputFileName)
     frameGenerator=videoRead(inputFolder+inputFileName)
     start=time.time()
@@ -106,53 +106,44 @@ def main():
     index=0
     nrSlices=15
     
-    limit=3.0
-    limit=60.0
-    # clahe1 = cv2.createCLAHE(clipLimit=limit, tileGridSize=(4,4))
-    clahe1 = cv2.createCLAHE(clipLimit=limit, tileGridSize=(8,8))
-    # clahe1 = cv2.createCLAHE()
-    # clahe2 = cv2.createCLAHE(clipLimit=limit, tileGridSize=(8,8))
-    # clahe3 = cv2.createCLAHE(clipLimit=limit, tileGridSize=(10,10))
-    # clahe4 = cv2.createCLAHE(clipLimit=limit, tileGridSize=(12,12))
-    # clahe2 = cv2.createCLAHE(clipLimit=1.0, tileGridSize=(128,128))
-
+    clahe1 = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(40,40))
+    clahe2 = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(80,80))
 
     
     for frame,durationTime in frameGenerator:
         frame = cv2.warpPerspective(frame,M,newsize)
         
-        # frame = cv2.GaussianBlur(frame,(21,21),0)
+        gray = cv2.cvtColor(frame,cv2.COLOR_BGR2GRAY)
+        mask1 = cv2.inRange(gray, 200 ,255)
+        mask1F = cv2.GaussianBlur(mask1,(21,21),0)
+        mask1FR = cv2.inRange(mask1F, 50 ,220)
+        mask1FRE = cv2.GaussianBlur(mask1FR,(61,61),0)
+        mask1FRER = cv2.inRange(mask1FRE, 100 ,255)
         
-        edges = cv2.Canny(frame,21,100)
-
-        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         
-        hsv=cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-        hsv1 = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-        # hsv[:,:,2] = cv2.equalizeHist(hsv[:,:,2])
-        # hsv[:,:,1] = cv2.equalizeHist(hsv[:,:,1])
-        hsv[:,:,2] = clahe1.apply(hsv[:,:,2])
-        hsv[:,:,2] = cv2.GaussianBlur(hsv[:,:,2],(21,21),0)
-        lower_white = np.array([0,0,230], dtype=np.uint8)
-        upper_white = np.array([255,50,255], dtype=np.uint8)
-        # #---------------------------------------------------------------------------
-
-        bin1 = cv2.inRange(hsv, lower_white, upper_white)
-        bin2 = cv2.inRange(hsv1, lower_white, upper_white)
-        grayE1 = hsv[:,:,2]
-
+        
+        
+        gray = convertImage(gray,rate)
+        mask1 = convertImage(mask1,rate)
+        mask1F = convertImage(mask1F,rate)
+        mask1FR = convertImage(mask1FR,rate)
+        mask1FRE = convertImage(mask1FRE,rate)
+        mask1FRER = convertImage(mask1FRER,rate)
 
 
         
-        gray  = convertImage(gray,rate)
-        gray1 = convertImage(grayE1,rate)
-        bin1   = convertImage(bin1,rate)
-        bin2  = convertImage(bin2,rate)
-        edges  = convertImage(edges,rate)
 
+    
         
+        ver1 = np.concatenate((gray,mask1,mask1F), axis=1)
+        ver2 = np.concatenate((mask1FR,mask1FRE,mask1FRER), axis=1)
+        # ver3 = np.concatenate((grayFR,mask1FR,mask2FR), axis=1)
+        # ver4 = np.concatenate((grayRes,mask1Res,mask2Res), axis=1)
+        # print(ver2.shape,ver3.shape)
+        # ,ver2,ver3
+
         # allImg=ver1
-        allImg = np.concatenate((gray,gray1,bin2,bin1,edges), axis=1)
+        allImg = np.concatenate((ver1,ver2), axis=0)
         cv2.imshow('',allImg)
         # cv2.waitKey(durationTime)
         cv2.waitKey()

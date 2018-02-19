@@ -1,0 +1,16 @@
+        # bgr=frame
+        # bgr = cv2.resize(bgr,(int(bgr.shape[1]/rate),int(bgr.shape[0]/rate)))
+        
+        # hsv = cv2.cvtColor(frame,cv2.COLOR_BGR2HSV)
+        # hsv = cv2.resize(hsv,(int(hsv.shape[1]/rate),int(hsv.shape[0]/rate)))
+
+        # hls = cv2.cvtColor(frame,cv2.COLOR_BGR2HLS)
+        # hls = cv2.resize(hsv,(int(hls.shape[1]/rate),int(hls.shape[0]/rate)))
+        
+        # b = cv2.applyColorMap(bgr[:,:,0],cv2.COLORMAP_BONE)
+        # g = cv2.applyColorMap(bgr[:,:,1],cv2.COLORMAP_BONE)
+        # r = cv2.applyColorMap(bgr[:,:,2],cv2.COLORMAP_BONE)
+        
+        # h1 = cv2.applyColorMap(hsv[:,:,0],cv2.COLORMAP_BONE)
+        # s1 = cv2.applyColorMap(hsv[:,:,1],cv2.COLORMAP_BONE)
+        # v1 = cv2.applyColorMap(hsv[:,:,2],cv2.COLORMAP_BONE)

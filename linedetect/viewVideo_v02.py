@@ -433,38 +433,38 @@ def main():
     startIndex=10
     for frame,durationTime in frameGenerator:
         frame = cv2.warpPerspective(frame,M,newsize)
-        # frame = cv2.GaussianBlur(frame
-        # ,(3,3),10)
-        gray,mask=processFrame2(frame)
-        # gray,mask=processFrame3(frame)
-        windowSize=(int(mask.shape[1]*3/nrSlices),int(mask.shape[0]/nrSlices))
+        # # frame = cv2.GaussianBlur(frame
+        # # ,(3,3),10)
+        # gray,mask=processFrame2(frame)
+        # # gray,mask=processFrame3(frame)
+        # windowSize=(int(mask.shape[1]*3/nrSlices),int(mask.shape[0]/nrSlices))
         
 
-        if(index>startIndex):
-            lines=nonslidingWindowMethod(mask,lines,windowSize)
-            for line in lines:
-                gray=drawLine(gray,line)
-                gray=drawWindows(gray,line,windowSize)
+        # if(index>startIndex):
+        #     lines=nonslidingWindowMethod(mask,lines,windowSize)
+        #     for line in lines:
+        #         gray=drawLine(gray,line)
+        #         gray=drawWindows(gray,line,windowSize)
 
         
-        if(index==startIndex):
-            gray,lines=slidingWindowMethod(gray,mask,windowSize,nrSlices)
-            for line in lines:
-                gray=drawLine(gray,line)
-                gray=drawWindows(gray,line,windowSize)    
+        # if(index==startIndex):
+        #     gray,lines=slidingWindowMethod(gray,mask,windowSize,nrSlices)
+        #     for line in lines:
+        #         gray=drawLine(gray,line)
+        #         gray=drawWindows(gray,line,windowSize)    
         
-        gray=cv2.resize(gray,(int(gray.shape[1]/rate),int(gray.shape[0]/rate)))
+        # gray=cv2.resize(gray,(int(gray.shape[1]/rate),int(gray.shape[0]/rate)))
         frame = cv2.resize(frame,(int(frame.shape[1]/rate),int(frame.shape[0]/rate)))
-        mask = cv2.resize(mask,(int(mask.shape[1]/rate),int(mask.shape[0]/rate)))
+        # mask = cv2.resize(mask,(int(mask.shape[1]/rate),int(mask.shape[0]/rate)))
 
-        mask = cv2.applyColorMap(mask,cv2.COLORMAP_BONE)
-        gray = cv2.applyColorMap(gray,cv2.COLORMAP_BONE)
+        # mask = cv2.applyColorMap(mask,cv2.COLORMAP_BONE)
+        # gray = cv2.applyColorMap(gray,cv2.COLORMAP_BONE)
 
-        vis = np.concatenate((frame,mask,gray), axis=1)
+        # vis = np.concatenate((frame,mask,gray), axis=1)
 
-        cv2.imshow('',vis)
-        cv2.waitKey()
-        # cv2.waitKey(durationTime)
+        cv2.imshow('',frame)
+        # cv2.waitKey()
+        cv2.waitKey(durationTime)
 
         index+=1
     end=time.time()

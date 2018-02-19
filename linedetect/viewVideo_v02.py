@@ -59,7 +59,7 @@ def lineVerification(mask,centers,windowSize):
     newCenters=[]
     img_size=(mask.shape[1],mask.shape[0])
     for center in centers:
-        limitsY=np.array([center[1]-windowSize[1]/2,center[1]+windowSize[1]/2],dtype=np.int32)
+        limitsY=np.array([center[1]-windowSize[0]/2,center[1]+windowSize[0]/2],dtype=np.int32)
         limitsX=np.array([center[0]-windowSize[0]/2,center[0]+windowSize[0]/2],dtype=np.int32)
 
         limitsX=np.clip(limitsX,0,img_size[0])
@@ -76,34 +76,30 @@ def lineVerification(mask,centers,windowSize):
 
 #Testing the window, based on correletion
 def liniarityVerifification(window,verticalTest=True,horizontalTest=True):
-    window_size=(window.shape[1],window.shape[0])
-    # Getting the non-zero coordinates in the window
-    Y,X=np.nonzero(window)
-    # if(len(X)==0):
-    #     return False
-    # Standard deviation calculating
-    StdX=np.std(X)
-    StdY=np.std(Y)
-    # Pearson/Spearman correlation coefficients 
-    corrCoef=np.corrcoef(Y,X)[0,1]
-    # Verifying the Pearson correlation coffecients, the vertical line or the horizontal line
-    return (np.abs(corrCoef)>0.80) or (horizontalTest and StdX<15 and StdY>window_size[1]*0.2) or  (verticalTest and StdX>window_size[0]*0.2 and StdY<10)
-
-# def windowCutting(img,pos,windowSize):
-#     limitsY=np.array([pos[1]-windowSize[1]/2,pos[1]+windowSize[1]/2],dtype=np.int32)
-#     limitsX=np.array([pos[0]-windowSize[0]/2,pos[0]+windowSize[0]/2],dtype=np.int32)
-#     limitsX=np.clip(limitsX,0,img.shape[1])
-#     limitsY=np.clip(limitsY,0,img.shape[0])
-#     window=img[limitsY[0]:limitsY[1],limitsX[0]:limitsX[1]]
-#     return window
-
+    
+    try:
+        window_size=(window.shape[1],window.shape[0])
+        # Getting the non-zero coordinates in the window
+        Y,X=np.nonzero(window)
+        # print(len(X),len(Y))
+        if(X.shape[0]<10):
+            return False
+        # Standard deviation calculating
+        StdX=np.std(X)
+        StdY=np.std(Y)
+        # Pearson/Spearman correlation coefficients 
+        corrCoef=np.corrcoef(Y,X)[0,1]
+        # Verifying the Pearson correlation coffecients, the vertical line or the horizontal line
+        return (np.abs(corrCoef)>0.90) or (horizontalTest and StdX<7 and StdY>window_size[1]*0.2) or  (verticalTest and StdX>window_size[0]*0.2 and StdY<10)
+    except:
+        return False
 
 # Processing the point and creating the connection between them, so it creates the lines
 def postProcessWindowCenter(windowsCenterAll,yDistance):
     nrCenter=len(windowsCenterAll)
     line=[]
     maxXdistance=150
-    maxYDistance=yDistance*3
+    maxYDistance=yDistance*4
 
     listIdsCenter=[None]*nrCenter
     lines2=[]
@@ -122,8 +118,8 @@ def postProcessWindowCenter(windowsCenterAll,yDistance):
                 continue
             # If the vertical and horizontal distance is smaller than the limits, then we search the nearest point. 
             elif ( (xDist<maxXdistance and yDist<maxYDistance and centerI[1]<centerJ[1]) or
-                    ( xDist<20 and  yDist<7*yDistance) or
-                    ( xDist<150 and yDist<1.5*yDistance)):
+                    ( xDist<50 and  yDist<7*yDistance) or
+                    ( xDist<300 and yDist<1.5*yDistance)):
                 distance= np.sqrt((centerI[0]-centerJ[0])**2 +(centerI[1]-centerJ[1])**2)
                 if minDistance is None or  minDistance>distance:
                     minDistance=distance
@@ -281,13 +277,16 @@ def nonslidingWindowMethod(mask,linesCenterPos,windowSize):
             sumWhiteX=np.sum(window,axis=0)
             sumTotalWhite=np.sum(sumWhiteX)
             if sumTotalWhite>0:
-                posX=np.average(range(len(sumWhiteX)),weights=sumWhiteX)    
-                isLine = liniarityVerifification(window)
+                posX=np.average(range(len(sumWhiteX)),weights=sumWhiteX)   
+                windowT,s= windowCutting(mask,pos,(windowSize[1],windowSize[1]))
+                print(windowT.shape)
+                isLine = liniarityVerifification(windowT)
                 # isLine = True
                 if isLine:
                     pos=(int(startX+posX),pos[1])
                     line[i-nrRemovedPoint]=pos
                 else:
+                    # ss=0
                     nrRemovedPoint+=1
                     line.remove(pos)
             else:
@@ -298,7 +297,7 @@ def nonslidingWindowMethod(mask,linesCenterPos,windowSize):
         if len(line) == 0:
             # The line disappeared
             linesCenterPos.remove(line)
-
+    print(len(linesCenterPos))
     return linesCenterPos
                 
 def videoRead(fileName):
@@ -321,18 +320,20 @@ def videoRead(fileName):
     cap.release()
     cv2.destroyAllWindows()
 
-
+clahe = cv2.createCLAHE(clipLimit=1.0, tileGridSize=(8,8))
 
 def processFrame2(frame):
     img_size=(frame.shape[1],frame.shape[0])
 
     hsv=cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-    clahe = cv2.createCLAHE(clipLimit=1.0, tileGridSize=(8,8))
+    
     hsv[:,:,1] = clahe.apply(hsv[:,:,1])
     hsv[:,:,2] = clahe.apply(hsv[:,:,2])
+    # hsv[:,:,2] = cv2.GaussianBlur(hsv[:,:,2],(41,41),0)
+    # hsv[:,:,1] = cv2.GaussianBlur(hsv[:,:,1],(41,41),0)
 
-    lower_white = np.array([0,0,140], dtype=np.uint8)
-    upper_white = np.array([255,80,255], dtype=np.uint8)
+    lower_white = np.array([0,0,170], dtype=np.uint8)
+    upper_white = np.array([255,40,255], dtype=np.uint8)
     # #---------------------------------------------------------------------------
 
     mask = cv2.inRange(hsv, lower_white, upper_white)
@@ -351,18 +352,20 @@ def processFrame3(frame):
     gray = cv2.cvtColor(frame,cv2.COLOR_BGR2GRAY)
     # grayF = cv2.GaussianBlur(gray,(151,151),0)
     # grayF = cv2.blur(gray,(151,151),0)
-    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
+    clahe = cv2.createCLAHE(clipLimit=10.0, tileGridSize=(8,8))
     # hsv[:,:,1] = clahe.apply(hsv[:,:,1])
     hsv[:,:,2] = clahe.apply(hsv[:,:,2])
     hsv[:,:,2] = cv2.GaussianBlur(hsv[:,:,2],(11,11),0)
 
-    v=cv2.blur(hsv[:,:,2],(71,71),0)
-    grayFR = cv2.inRange(v, 160 ,255)
+    v=cv2.blur(hsv[:,:,2],(141,141),0)
+    grayFR = cv2.inRange(v, 140 ,255)
+    grayFR = cv2.dilate(grayFR,np.ones((51,51),dtype=np.uint8),iterations=1)
     grayFR_inv   = cv2.bitwise_not(grayFR)
+    # grayFR = cv2.dilate(grayFR,np.ones((101,101),dtype=np.uint8),iterations=1)
 
 
-    lower_white = np.array([0,0,180], dtype=np.uint8)
-    upper_white = np.array([255,80,255], dtype=np.uint8)
+    lower_white = np.array([0,0,140], dtype=np.uint8)
+    upper_white = np.array([255,40,255], dtype=np.uint8)
     # #---------------------------------------------------------------------------
 
     mask = cv2.inRange(hsv, lower_white, upper_white)
@@ -411,12 +414,14 @@ def main():
     # inputFolder='/home/nandi/Workspaces/Work/Python/opencvProject/Apps/pics/videos/'
     # inputFolder='C:\\Users\\aki5clj\\Documents\\PythonWorkspace\\Rpi\\Opencv\\LineDetection\\resource\\'
     inputFolder= os.path.realpath('../../resource/videos')
-    inputFileName='/newRecord/move20.h264'
-    inputFileName = '/f_big_50_4.h264'
+    inputFileName='/record19Feb2/test50L_5.h264'
+    # inputFileName='/newRecord/move14.h264'
+    # inputFileName = '/f_big_50_2.h264'
     print(inputFolder+inputFileName)
     frameGenerator=videoRead(inputFolder+inputFileName)
     start=time.time()
     rate=2
+
     index=0
 
     M,M_inv,newsize=getPerspectiveTransformationMatrix()
@@ -428,10 +433,12 @@ def main():
     startIndex=10
     for frame,durationTime in frameGenerator:
         frame = cv2.warpPerspective(frame,M,newsize)
-        # frame = cv2.GaussianBlur(frame,(3,3),10)
+        # frame = cv2.GaussianBlur(frame
+        # ,(3,3),10)
         gray,mask=processFrame2(frame)
-        windowSize=(int(mask.shape[1]*3/nrSlices),int(mask.shape[0]/nrSlices))
         # gray,mask=processFrame3(frame)
+        windowSize=(int(mask.shape[1]*3/nrSlices),int(mask.shape[0]/nrSlices))
+        
 
         if(index>startIndex):
             lines=nonslidingWindowMethod(mask,lines,windowSize)

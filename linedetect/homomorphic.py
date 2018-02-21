@@ -24,9 +24,12 @@ class LineHomomorphic:
         optimalNrows = cv2.getOptimalDFTSize(int(img_size[0]/rate))
         optimalNcols = cv2.getOptimalDFTSize(int(img_size[1]/rate))
         self.img_size = (optimalNrows,optimalNcols)
-        temp = gkern(l = (optimalNcols,optimalNrows),sig =6)
-        temp = np.max(temp) - temp
-        normTemp = temp / np.sum(temp)
+        temp = gkern(l = (optimalNcols,optimalNrows),sig =0.9)
+        plt.imshow(temp)
+        plt.show()
+        temp = 1 - temp
+        normTemp = temp 
+        # / np.sum(temp)
         self.kernel_highPass = np.zeros((optimalNrows,optimalNcols,2))
         self.kernel_highPass [:,:,0] = normTemp
         self.kernel_highPass [:,:,1] = normTemp
@@ -39,10 +42,11 @@ class LineHomomorphic:
         dft_shift = np.fft.fftshift(dft)
         fshift = dft_shift*self.kernel_highPass
         f_ishift = np.fft.ifftshift(fshift)
-        img_back = cv2.idft(f_ishift)
+        img_back = cv2.idft(f_ishift,flags= cv2.DFT_SCALE)
         img_back = cv2.magnitude(img_back[:,:,0],img_back[:,:,1])
-        img=np.uint8(img_back)
-        return img
+        
+        # img=np.uint8(img_back)
+        return img_back
 
     
     
@@ -57,11 +61,11 @@ class LineHomomorphic:
 
 def main():
     inputFolder= os.path.realpath('../../resource/videos')
-    inputFileName='/f_big_50_3.h264'
+    # inputFileName='/f_big_50_3.h264'
     # inputFileName='/record19Feb/test50_7.h264'
     # inputFileName='/record19Feb2/test50L_1.h264'
     # inputFileName='/move1.h264'
-    # inputFileName='/newRecord/move16.h264'
+    inputFileName='/newRecord/move1.h264'
     # inputFileName='/record20Feb/test5_1.h264'
     cap = cv2.VideoCapture(inputFolder+inputFileName)
     M,M_inv,newsize=VideoPlayer.getPerspectiveTransformationMatrix()
@@ -95,8 +99,14 @@ def main():
 
 
         img_border = gg.border(gray)
+
+        img_border = np.log(img_border + 1)
+
         img = gg.filterImage(img_border)
 
+        img = np.uint8(np.exp(img) - 1)
+
+        print(np.min(img))
 
         # I = np.float32(gray)
         # I = np.log(I + 1)
@@ -128,11 +138,11 @@ def main():
 
 
 
-        # img_small = img[:size[0],:size[1]]
-        img_small = gray
-        mask = img[:size[0],:size[1]]
+        img_small = img[:size[0],:size[1]]
+        # img_small = gray
+        # mask = img[:size[0],:size[1]]
 
-        # mask= cv2.adaptiveThreshold(img_small,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C,cv2.THRESH_BINARY,151,-35)
+        mask= cv2.adaptiveThreshold(img_small,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C,cv2.THRESH_BINARY,31,-1)
         # mask= cv2.adaptiveThreshold(img_small,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C,cv2.THRESH_BINARY,201,-10)
 
         # thres,mask = cv2.threshold(Ihmf,50,255,cv2.THRESH_BINARY)

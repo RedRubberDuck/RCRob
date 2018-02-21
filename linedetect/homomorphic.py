@@ -24,17 +24,17 @@ class LineHomomorphic:
         optimalNrows = cv2.getOptimalDFTSize(int(img_size[0]/rate))
         optimalNcols = cv2.getOptimalDFTSize(int(img_size[1]/rate))
         self.img_size = (optimalNrows,optimalNcols)
-        temp6 = gkern(l = (optimalNcols,optimalNrows),sig =60.0)
-        temp = gkern(l = (optimalNcols,optimalNrows),sig =0.5)
+        temp6 = gkern(l = (optimalNcols,optimalNrows),sig =20.0)
+        temp = gkern(l = (optimalNcols,optimalNrows),sig =16.0)
         
-        temp = 1 - temp
-        normTemp = temp 
+        temp = 1 + temp - temp6
+        normTemp = temp
         # * temp6
         # / np.sum(temp)
         self.kernel_highPass = np.zeros((optimalNrows,optimalNcols,2))
         self.kernel_highPass [:,:,0] = normTemp
         self.kernel_highPass [:,:,1] = normTemp
-        plt.imshow(temp*temp6)
+        plt.imshow(normTemp)
         plt.show()
 
     def filterImage(self,frame):
@@ -67,7 +67,7 @@ def main():
     # inputFileName='/f_big_50_3.h264'
     # inputFileName='/record19Feb/test50_7.h264'
     # inputFileName='/record19Feb2/test50L_1.h264'
-    inputFileName='/move14.h264'
+    inputFileName='/move1.h264'
     inputFileName='/record19Feb2/test50L_3.h264'
     # inputFileName='/newRecord/move1.h264'
     # inputFileName='/record20Feb/test5_1.h264'
@@ -94,13 +94,13 @@ def main():
 
         img_border = gg.border(gray)
 
-        img_border = np.log(img_border + 1)
+        # img_border = np.log(img_border + 1)
 
-        # img = gg.filterImage(img_border)
-        # img = np.uint8(img)
-        img = img_border
+        img = gg.filterImage(img_border)
+        img = np.uint8(img)
+        # img = img_border
 
-        img = np.uint8(np.exp(img) - 1)
+        # img = np.uint8(np.exp(img) - 1)
 
 
 
@@ -109,7 +109,7 @@ def main():
         # img_small = gray
         # mask = img[:size[0],:size[1]]
 
-        mask= cv2.adaptiveThreshold(img_small,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C,cv2.THRESH_BINARY,31,-13.5)
+        mask= cv2.adaptiveThreshold(img_small,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C,cv2.THRESH_BINARY,31,-10.5)
         # mask= cv2.adaptiveThreshold(img_small,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C,cv2.THRESH_BINARY,201,-10)
 
         end_time=time.time()

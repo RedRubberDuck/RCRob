@@ -65,16 +65,16 @@ class LineFilter:
         self.perspectiveTrans = perspectiveTrans
         self.kernelSize=kernelSize
 
-    def apply(self,frame,applyClahe=False):
+    def apply(self,frame,applyClahe=True):
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         if (applyClahe):
             gray = self.clahe.apply(gray)
         else:
              gray = cv2.equalizeHist(gray)
         birdviewGray = self.perspectiveTrans.wrapPerspective(gray)
-        gray = cv2.resize(gray,(birdviewGray.shape[1],birdviewGray.shape[0]))
+        # gray = cv2.resize(gray,(birdviewGray.shape[1],birdviewGray.shape[0]))
 
-        imgMasked,Mask1,Mask2=self.filter(gray)
+        imgMasked,Mask1,Mask2=self.filter(birdviewGray)
         return birdviewGray,imgMasked,Mask1,Mask2
     
     def filter(self,gray):
@@ -101,7 +101,7 @@ def main():
     inputFileName='/f_big_50_4.h264'
     # inputFileName='/record19Feb/test50_5.h264'
     inputFileName='/record19Feb2/test50L_3.h264'
-    # inputFileName='/move1.h264'
+    # inputFileName='/move2.h264'
     # inputFileName='/newRecord/move1.h264'
     # inputFileName='/record20Feb/test5_1.h264'
     cap = cv2.VideoCapture(inputFolder+inputFileName)

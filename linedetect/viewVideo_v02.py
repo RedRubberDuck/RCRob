@@ -3,6 +3,8 @@ from matplotlib import pyplot as plt
 import numpy as np
 import time 
 
+import videoProc
+
 x=np.linspace(0,2,20)
 sig=0.4;mu=1
 gauss = np.exp(-np.power(x - mu, 2.) / (2 * np.power(sig, 2.)))
@@ -418,7 +420,11 @@ def main():
     # inputFileName='/newRecord/move14.h264'
     # inputFileName = '/f_big_50_2.h264'
     print(inputFolder+inputFileName)
-    frameGenerator=videoRead(inputFolder+inputFileName)
+    
+    videoReader = videoProc.VideoReader(inputFolder+inputFileName)
+    frameRate = 30
+    frameDuration = 
+    # frameGenerator=videoRead(inputFolder+inputFileName)
     start=time.time()
     rate=2
 
@@ -431,7 +437,7 @@ def main():
     index=0
     nrSlices=15
     startIndex=10
-    for frame,durationTime in frameGenerator:
+    for frame in videoReader.generateFrame():
         frame = cv2.warpPerspective(frame,M,newsize)
         # # frame = cv2.GaussianBlur(frame
         # # ,(3,3),10)
@@ -464,7 +470,7 @@ def main():
 
         cv2.imshow('',frame)
         # cv2.waitKey()
-        cv2.waitKey(durationTime)
+        cv2.waitKey(frameDuration)
 
         index+=1
     end=time.time()

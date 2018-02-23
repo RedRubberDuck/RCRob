@@ -1,6 +1,7 @@
 import numpy as np
 import cv2,time,os
 import VideoPlayer
+import drawFunction, frameProcessor
 from  matplotlib import pyplot as plt
 
 
@@ -25,9 +26,9 @@ class LineHomomorphic:
         optimalNcols = cv2.getOptimalDFTSize(int(img_size[1]/rate))
         self.img_size = (optimalNrows,optimalNcols)
         temp6 = gkern(l = (optimalNcols,optimalNrows),sig =20.0)
-        temp = gkern(l = (optimalNcols,optimalNrows),sig =16.0)
+        temp = gkern(l = (optimalNcols,optimalNrows),sig =0.8)
         
-        temp = 1 + temp - temp6
+        temp = 1 - temp
         normTemp = temp
         # * temp6
         # / np.sum(temp)
@@ -67,14 +68,14 @@ def main():
     # inputFileName='/f_big_50_3.h264'
     # inputFileName='/record19Feb/test50_7.h264'
     # inputFileName='/record19Feb2/test50L_1.h264'
-    inputFileName='/move1.h264'
-    inputFileName='/record19Feb2/test50L_3.h264'
-    # inputFileName='/newRecord/move1.h264'
+    # inputFileName='/move1.h264'
+    # inputFileName='/record19Feb2/test50L_5.h264'
+    inputFileName='/newRecord/move1.h264'
     # inputFileName='/record20Feb/test5_1.h264'
     cap = cv2.VideoCapture(inputFolder+inputFileName)
     M,M_inv,newsize=VideoPlayer.getPerspectiveTransformationMatrix()
     # clahe = cv2.createCLAHE(clipLimit=30.0, tileGridSize=(8,8))
-
+    drawer = frameProcessor.frameFilter.TriangleMaksDrawer.cornersMaskPolygons1(newsize)
     size=(int(1232/rate),int(1648/rate))
     original_size=(1232,1648)
     print(size)
@@ -87,6 +88,7 @@ def main():
         # gray = cv2.equalizeHist(gray)
         gray = cv2.warpPerspective(gray,M,newsize)
         
+        
         gray = cv2.resize(gray,(size[1],size[0]))
         # gray = clahe.apply(gray)
         start_time=time.time()
@@ -94,13 +96,13 @@ def main():
 
         img_border = gg.border(gray)
 
-        # img_border = np.log(img_border + 1)
+        img_border = np.log(img_border + 1)
 
         img = gg.filterImage(img_border)
-        img = np.uint8(img)
+        # img = np.uint8(img)
         # img = img_border
 
-        # img = np.uint8(np.exp(img) - 1)
+        img = np.uint8(np.exp(img) - 1)
 
 
 
@@ -110,6 +112,7 @@ def main():
         # mask = img[:size[0],:size[1]]
 
         mask= cv2.adaptiveThreshold(img_small,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C,cv2.THRESH_BINARY,31,-10.5)
+        mask = drawer.draw(mask)
         # mask= cv2.adaptiveThreshold(img_small,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C,cv2.THRESH_BINARY,201,-10)
 
         end_time=time.time()

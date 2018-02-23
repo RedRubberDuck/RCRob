@@ -25,10 +25,10 @@ class LineHomomorphic:
         optimalNrows = cv2.getOptimalDFTSize(int(img_size[0]/rate))
         optimalNcols = cv2.getOptimalDFTSize(int(img_size[1]/rate))
         self.img_size = (optimalNrows,optimalNcols)
-        temp6 = gkern(l = (optimalNcols,optimalNrows),sig =20.0)
-        temp = gkern(l = (optimalNcols,optimalNrows),sig =0.8)
+        temp6 = gkern(l = (optimalNcols,optimalNrows),sig =1.0)
+        temp = gkern(l = (optimalNcols,optimalNrows),sig =10.8)
         
-        temp = 1 - temp
+        temp = 1 - (temp-temp6)
         normTemp = temp
         # * temp6
         # / np.sum(temp)
@@ -67,10 +67,10 @@ def main():
     inputFolder= os.path.realpath('../../resource/videos')
     # inputFileName='/f_big_50_3.h264'
     # inputFileName='/record19Feb/test50_7.h264'
-    # inputFileName='/record19Feb2/test50L_1.h264'
+    inputFileName='/record19Feb2/test50L_3.h264'
     # inputFileName='/move1.h264'
     # inputFileName='/record19Feb2/test50L_5.h264'
-    inputFileName='/newRecord/move1.h264'
+    # inputFileName='/newRecord/move1.h264'
     # inputFileName='/record20Feb/test5_1.h264'
     cap = cv2.VideoCapture(inputFolder+inputFileName)
     M,M_inv,newsize=VideoPlayer.getPerspectiveTransformationMatrix()
@@ -89,20 +89,20 @@ def main():
         gray = cv2.warpPerspective(gray,M,newsize)
         
         
-        gray = cv2.resize(gray,(size[1],size[0]))
+        # gray = cv2.resize(gray,(size[1],size[0]))
         # gray = clahe.apply(gray)
         start_time=time.time()
 
 
         img_border = gg.border(gray)
 
-        img_border = np.log(img_border + 1)
+        # img_border = np.log(img_border + 1)
 
         img = gg.filterImage(img_border)
-        # img = np.uint8(img)
+        img = np.uint8(img)
         # img = img_border
 
-        img = np.uint8(np.exp(img) - 1)
+        # img = np.uint8(np.exp(img) - 1)
 
 
 

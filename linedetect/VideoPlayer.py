@@ -1,8 +1,6 @@
 import numpy as np
 import cv2,time,os
-
-
-
+import frameProcessor
 
 
 
@@ -98,12 +96,13 @@ class LineFilter:
 
 def main():
     inputFolder= os.path.realpath('../../resource/videos')
+    desFolder = os.path.realpath('../../resource/pic')
     inputFileName='/f_big_50_4.h264'
     # inputFileName='/record19Feb/test50_5.h264'
     inputFileName='/record19Feb2/test50L_3.h264'
     # inputFileName='/move2.h264'
     # inputFileName='/newRecord/move1.h264'
-    # inputFileName='/record20Feb/test5_1.h264'
+    # inputFileName='/record20Feb/test3_1.h264'
     cap = cv2.VideoCapture(inputFolder+inputFileName)
     M,M_inv,newsize=getPerspectiveTransformationMatrix()
 
@@ -111,34 +110,53 @@ def main():
     perspectivTransform = ImagePersTrans(M,M_inv,newsize)
     lineFilter = LineFilter(perspectivTransform,3.0,(46,46))
 
+    trans = frameProcessor.ImagePersTrans.getPerspectiveTransformation1()
+
     rate=1
+    index = 0
     while(cap.isOpened()):
         ret, frame = cap.read()
+        gray = frame
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        gray = trans.wrapPerspective(gray)
+        edges = cv2.Canny(gray,threshold1=50, 	threshold2= 150)
+        edges_inv = cv2.bitwise_not(edges)
+        # res = cv2.connectedComponents(edges_inv,connectivity=8,ltype=cv2.CV_16U)
+        print(res[1])
         
-        img,img1,mask,mask2 = lineFilter.apply(frame)
-        # img = cv2.warpPerspective(gray,M,newsize)
-        # img = perspectivTransform.wrapPerspective(gray)
-        # img=cv2.resize(gray,(int(gray.shape[1]/2),int(gray.shape[0]/2)))
-        # img = clahe.apply(img)
-        # img = 
-        # frame = cv2.warpPerspective(frame,M,newsize)
-        # img=cv2.resize(img,(int(img.shape[1]/rate),int(img.shape[0]/rate)))    
-        # =preprocess2(img,1)
+        ff = np.uint8(res[1]/np.max(res[1])*255)
+        mEx = cv2.morphologyEx(gray, cv2.MORPH_GRADIENT, np.ones((21,21)))
+
+        # mask= cv2.adaptiveThreshold(gray,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C,cv2.THRESH_BINARY,31,-10.5)
+        
+        # cv2.imwrite(desFolder+'/im'+str(index)+'.jpg',frame)
+        # index += 1
+        # img,img1,mask,mask2 = lineFilter.apply(frame)
+        # # img = cv2.warpPerspective(gray,M,newsize)
+        # # img = perspectivTransform.wrapPerspective(gray)
+        # # img=cv2.resize(gray,(int(gray.shape[1]/2),int(gray.shape[0]/2)))
+        # # img = clahe.apply(img)
+        # # img = 
+        # # frame = cv2.warpPerspective(frame,M,newsize)
+        # # img=cv2.resize(img,(int(img.shape[1]/rate),int(img.shape[0]/rate)))    
+        # # =preprocess2(img,1)
 
         
         
         
         
-        img=cv2.resize(img,(int(img.shape[1]/rate),int(img.shape[0]/rate)))
-        mask=cv2.resize(mask,(int(mask.shape[1]/rate),int(mask.shape[0]/rate)))
-        img1=cv2.resize(img1,(int(img1.shape[1]/rate),int(img1.shape[0]/rate)))
+        # img=cv2.resize(img,(int(img.shape[1]/rate),int(img.shape[0]/rate)))
+        # mask=cv2.resize(mask,(int(mask.shape[1]/rate),int(mask.shape[0]/rate)))
+        # img1=cv2.resize(img1,(int(img1.shape[1]/rate),int(img1.shape[0]/rate)))
 
-        resImagesGray = np.concatenate((img,mask,img1), axis=1)
-        resImagesGrayMap = cv2.applyColorMap(resImagesGray, cv2.COLORMAP_BONE)
+        # resImagesGray = np.concatenate((img,mask,img1), axis=1)
+        
 
-        frame  = cv2.resize(frame,(resImagesGrayMap.shape[1],resImagesGrayMap.shape[0]))
+        # edges  = cv2.resize(edges,(gray.shape[1],gray.shape[0]))
+        # resImagesGrayMap = cv2.applyColorMap(edges, cv2.COLORMAP_BONE)
+        # mEx = cv2.applyColorMap(mEx, cv2.COLORMAP_BONE)
 
-        resFinal = np.concatenate((frame,resImagesGrayMap), axis=0)
+        resFinal = np.concatenate((gray,edges_inv,ff), axis=1)
 
 
         if(frame is not None):

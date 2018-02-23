@@ -11,9 +11,9 @@ def main():
     # source folder
     inputFolder= os.path.realpath('../../resource/videos')
     # source file
-    # inputFileName='/record19Feb2/test50L_5.h264'
-    inputFileName='/newRecord/move2.h264'
-    # inputFileName = '/f_big_50_1.h264'
+    
+    # inputFileName='/move1.h264'
+    inputFileName='/record19Feb2/test50L_5.h264'
     print('Processing:',inputFolder+inputFileName)
     # Video frame reader object
     videoReader = videoProc.VideoReader(inputFolder+inputFileName)
@@ -21,7 +21,7 @@ def main():
     frameDuration = 1.0/frameRate
 
     # Perspective transformation
-    persTransformation = frameProcessor.ImagePersTrans.getPerspectiveTransformation()
+    persTransformation = frameProcessor.ImagePersTrans.getPerspectiveTransformation1()
     # Frame filter to find the line
     framelineFilter = frameProcessor.frameFilter.FrameLineSimpleFilter(persTransformation)
     # Size of the iamge after perspective transformation
@@ -32,6 +32,8 @@ def main():
     nrSlices = 15
     windowSize=(int(newSize[1]*2/nrSlices),int(newSize[0]/nrSlices))
     slidingMethod = frameProcessor.SlidingWindowMethod(nrSlice = nrSlices,windowSize = windowSize)
+    
+    nonslidingMethod = frameProcessor.NonSlidingWindowMethod(windowSize)
     # Window size 
     
     index = 0
@@ -45,7 +47,7 @@ def main():
             centerAll,lines = slidingMethod.apply(mask)
             # drawFunction.drawWindows(birdview_mask,centerAll,windowSize)
         else:
-            frameProcessor.NonSlidingWindowMethod.nonslidingWindowMethod(mask,lines,windowSize)
+            nonslidingMethod.nonslidingWindowMethod(mask,lines)
             
         
         for line in lines:
@@ -55,7 +57,7 @@ def main():
         t2 =time.time()
         print('DDD',t2-t1)
         
-        res = drawFunction.drawSubRegion(mask,gray,20,(10,10))
+        res = drawFunction.drawSubRegion(mask,gray,10,(10,10))
         img_show = res
 
         cv2.imshow('Frame',img_show)

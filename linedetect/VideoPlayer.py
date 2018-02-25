@@ -1,6 +1,7 @@
 import numpy as np
 import cv2,time,os
 import frameProcessor
+from matplotlib import pyplot as plt
 
 
 
@@ -93,6 +94,69 @@ class LineFilter:
         
         return res,mask,mask2
 
+def gkern(l=(5,5), sig=1.):
+    """
+    creates gaussian kernel with side length l and a sigma of sig
+    """
+
+    ay = np.arange(-l[0] // 2 + 1., l[0] // 2 + 1.)
+    ax = np.arange(-l[1] // 2 + 1., l[1] // 2 + 1.)
+    yy, xx = np.meshgrid(ay, ax)
+
+    kernel = np.exp(-(xx**2 + yy**2) / (2. * sig**2))
+
+    return kernel 
+
+
+def histogramMethod2(part,yPos):
+    windowscenter=[]
+    part_size=(part.shape[1],part.shape[0])
+    #Limit calculation
+    slice_size=part_size[1]*part_size[0]
+    # upper_limit=0.037037037037037035 
+    upper_limit=0.04537037037037035 
+    lower_limit=0.009259259259259259
+
+    upperLimitSize = slice_size*upper_limit
+    loweLimitSize = slice_size*lower_limit
+
+    #Calculating histogram
+    histogram=np.sum(part,axis=0)/255
+
+    Mean=np.sum(histogram)/len(histogram)
+
+    #Filter the histogram
+    # kernel =  np.ones((1,41))/41
+    kernel =  (np.ones((1,65))/65)[0,:]
+    histogram_f=np.convolve(histogram,kernel,'same')
+    # histogram_f = histogram
+
+    accumulate=0
+    accumulatePos=0
+    for i in range(part_size[0]):
+        #The non-zero block
+        if histogram_f[i]>0:
+            accumulate+=histogram_f[i]
+            accumulatePos+=histogram_f[i]*i
+        # The end of a non-zero block
+        elif histogram_f[i]==0 and histogram_f[i-1]>0:
+            
+            if accumulate<upperLimitSize and accumulate>loweLimitSize:
+                #Calculating the middle of the non-zero block
+                indexP=int(accumulatePos/accumulate)
+                #Verify the distance from the last non-zeros block
+                if (len(windowscenter)>0 and abs(windowscenter[-1][0]-indexP)<100):
+                    #If the distance is smaller than the threshold, then combines it.
+                    indexP=int((windowscenter[-1][0]+indexP)/2)
+                    windowscenter[-1]=(indexP,windowscenter[-1][1])
+                else:
+                    # Add to the list of the windowsCenters
+                    windowscenter.append((indexP,yPos))
+            accumulate=0
+            accumulatePos=0
+            
+    return windowscenter
+
 
 def main():
     inputFolder= os.path.realpath('../../resource/videos')
@@ -101,7 +165,7 @@ def main():
     # inputFileName='/record19Feb/test50_5.h264'
     inputFileName='/record19Feb2/test50L_3.h264'
     # inputFileName='/move2.h264'
-    # inputFileName='/newRecord/move1.h264'
+    # inputFileName='/newRecord/move2.h264'
     # inputFileName='/record20Feb/test3_1.h264'
     cap = cv2.VideoCapture(inputFolder+inputFileName)
     M,M_inv,newsize=getPerspectiveTransformationMatrix()
@@ -112,61 +176,75 @@ def main():
 
     trans = frameProcessor.ImagePersTrans.getPerspectiveTransformation1()
 
-    rate=1
+    rate=2
     index = 0
+
+    nrSlices = 15
+
+    kernel_gaus = gkern((10,10),sig=1.5)
+    kernel_gaus = kernel_gaus/np.sum(kernel_gaus)
+    
+    kernel = np.zeros((50,50))
+    kernel = cv2.circle(kernel,(25,25),12,(255,255,255),thickness=1)
+    kernel[25,25] = 255
+    kernel = cv2.circle(kernel,(25,25),1,(255,255,255),thickness=2)
+    
+    # kernel = cv2.filter2D(kernel,-1,kernel_gaus) 
+
+    kernel = kernel / np.sum(kernel)   
+    
+    plt.imshow(kernel)
+
+    plt.show()
+
+    index += 0
+
     while(cap.isOpened()):
         ret, frame = cap.read()
         gray = frame
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        gray = trans.wrapPerspective(gray)
+        
         edges = cv2.Canny(gray,threshold1=50, 	threshold2= 150)
-        edges_inv = cv2.bitwise_not(edges)
-        # res = cv2.connectedComponents(edges_inv,connectivity=8,ltype=cv2.CV_16U)
-        print(res[1])
+        # edges = cv2.dilate(edges,np.ones((3,3)),iterations= 1)
+        # edges[] = cv2.dilate(edges,np.ones((3,3)),iterations= 1)
         
-        ff = np.uint8(res[1]/np.max(res[1])*255)
-        mEx = cv2.morphologyEx(gray, cv2.MORPH_GRADIENT, np.ones((21,21)))
+        gray1 = trans.wrapPerspective(gray)
+        # gray1 = gray.copy()
+        mask= cv2.adaptiveThreshold(gray1,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C,cv2.THRESH_BINARY,31,-13.5)
+        edges = trans.wrapPerspective(edges)
+        
+        img_size = (edges.shape[1],edges.shape[0])
 
-        # mask= cv2.adaptiveThreshold(gray,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C,cv2.THRESH_BINARY,31,-10.5)
+        if index>100:
+            cv2.imwrite('pp/im'+str(index)+'.jpg',edges)
+        index+=1
+        print(index)
         
-        # cv2.imwrite(desFolder+'/im'+str(index)+'.jpg',frame)
-        # index += 1
-        # img,img1,mask,mask2 = lineFilter.apply(frame)
-        # # img = cv2.warpPerspective(gray,M,newsize)
-        # # img = perspectivTransform.wrapPerspective(gray)
-        # # img=cv2.resize(gray,(int(gray.shape[1]/2),int(gray.shape[0]/2)))
-        # # img = clahe.apply(img)
-        # # img = 
-        # # frame = cv2.warpPerspective(frame,M,newsize)
-        # # img=cv2.resize(img,(int(img.shape[1]/rate),int(img.shape[0]/rate)))    
-        # # =preprocess2(img,1)
-
-        
-        
-        
-        
-        # img=cv2.resize(img,(int(img.shape[1]/rate),int(img.shape[0]/rate)))
-        # mask=cv2.resize(mask,(int(mask.shape[1]/rate),int(mask.shape[0]/rate)))
-        # img1=cv2.resize(img1,(int(img1.shape[1]/rate),int(img1.shape[0]/rate)))
-
-        # resImagesGray = np.concatenate((img,mask,img1), axis=1)
-        
-
-        # edges  = cv2.resize(edges,(gray.shape[1],gray.shape[0]))
-        # resImagesGrayMap = cv2.applyColorMap(edges, cv2.COLORMAP_BONE)
-        # mEx = cv2.applyColorMap(mEx, cv2.COLORMAP_BONE)
-
-        resFinal = np.concatenate((gray,edges_inv,ff), axis=1)
+        # for i in range(nrSlices):
+        #     part=edges[int(img_size[1]*i/nrSlices):int(img_size[1]*(i+1)/nrSlices),:]
+            
+        #     hist = np.sum(part,axis=0)
+        #     plt.subplot(212)
+        #     plt.imshow(part)
+        #     plt.subplot(211)
+        #     plt.plot(hist)
+        #     plt.show()
+            
+        #     # cv2.imshow('s',part)
+        #     # cv2.waitKey()
+        # resFinal = np.concatenate((edges,edges_flt,mask_flt,mask3), axis=1)
+        # resFinal = cv2.resize(resFinal,(resFinal.shape[1]//rate,resFinal.shape[0]//rate) )
 
 
         if(frame is not None):
-            cv2.imshow('frame',resFinal)
+            cv2.imshow('frame',edges)
         else:
             break
-        # time.sleep(0.01)
-        if cv2.waitKey(33) & 0xFF == ord('q'):
+        # # time.sleep(0.01)
+        if cv2.waitKey() & 0xFF == ord('q'):
             break
-
+        # if index>:
+        #     break
     cap.release()
     cv2.destroyAllWindows()
 

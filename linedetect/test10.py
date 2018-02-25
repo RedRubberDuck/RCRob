@@ -12,8 +12,8 @@ def main():
     inputFolder= os.path.realpath('../../resource/videos')
     # source file
     
-    # inputFileName='/move1.h264'
-    inputFileName='/record19Feb2/test50L_5.h264'
+    # inputFileName='/newRecord/move1.h264'
+    inputFileName='/record19Feb2/test50L_4.h264'
     print('Processing:',inputFolder+inputFileName)
     # Video frame reader object
     videoReader = videoProc.VideoReader(inputFolder+inputFileName)
@@ -29,11 +29,13 @@ def main():
     # Drawer the mask on the corner
     drawer = frameProcessor.frameFilter.TriangleMaksDrawer.cornersMaskPolygons1(newSize)
     # Sliding method 
-    nrSlices = 15
+    nrSlices = 20
     windowSize=(int(newSize[1]*2/nrSlices),int(newSize[0]/nrSlices))
     slidingMethod = frameProcessor.SlidingWindowMethod(nrSlice = nrSlices,windowSize = windowSize)
     
-    nonslidingMethod = frameProcessor.NonSlidingWindowMethod(windowSize)
+
+    windowSize_nonsliding=(int(newSize[1]*2/nrSlices),int(newSize[0]*2/nrSlices))
+    nonslidingMethod = frameProcessor.NonSlidingWindowMethod(windowSize_nonsliding,int(newSize[0]*0.9/nrSlices))
     # Window size 
     
     index = 0

@@ -24,7 +24,7 @@ class ImagePersTrans:
                 [434-70,527],[1316+70,497],
                 [-439,899],[2532,818]])
 
-        step=45*5
+        step=45 * 10
         corners_real = np.float32( [
                 [0,0],[2,0],
                 [0,2],[2,2]])*step
@@ -97,7 +97,7 @@ class PointsConnectivity:
         self.maxYDistanceGen = windowSize[1] * 3
         # self.maxYDistanceCol = windowSize[1] * 4
         self.limitLine = np.tan(np.radians(15))
-        self.limitDistance = 450
+        self.limitDistance = np.sqrt(windowSize[0]**2 + windowSize[1]**2)*5
         
     def pointColliniarity(self,xDistAB,yDistAB,xDistBC,yDistBC):
         A = yDistBC*xDistAB - xDistBC*yDistAB
@@ -313,9 +313,10 @@ def generatingNewPosition(lines,windowYSize):
 
 
 class NonSlidingWindowMethod:
-    def __init__(self,windowSize):
+    def __init__(self,windowSize,distanceLimit = 40):
         self.windowSize = windowSize
-        self.lineEximiner = LiniarityExaminer(inferiorCorrLimit = 0.9 ,lineThinkness = 24)
+        self.lineEximiner = LiniarityExaminer(inferiorCorrLimit = 0.75 ,lineThinkness = 24)
+        self. distanceLimit = distanceLimit
 
 
     def windowCutting(im,pos,windowSize):
@@ -329,7 +330,7 @@ class NonSlidingWindowMethod:
         [startX,endX]=np.clip([startX,endX],0,img_size[0])
         [startY,endY]=np.clip([startY,endY],0,img_size[1])
         window=im[startY:endY,startX:endX]
-        return window,startX
+        return window,startX,startY
         
     def generatingNewIntermediatePoint(self,lines):
         for line in lines:
@@ -339,11 +340,14 @@ class NonSlidingWindowMethod:
                 centerI = line[i+nrNewPoint]
                 centerI1 = line[i+1+nrNewPoint]
                 disY = centerI1[1] - centerI[1]
-                nrLineDis=int((disY)/self.windowSize[1])
-                # print(nrLineDis)
+                disX = centerI1[0] - centerI[0]
+                
+                dist =  np.sqrt(disY**2 + disX**2)
+                nrLineDis=int(dist/self.distanceLimit)
+                print("NR.Lines:",nrLineDis)
                 for j in range(1,nrLineDis):
-                    posX = int(centerI[0] + ((centerI1[0]-centerI[0])*j/nrLineDis ))
-                    posY = int(centerI[1] + ((centerI1[1]-centerI[1])*j/nrLineDis ))
+                    posX = int(centerI[0] + (disX*j/nrLineDis ))
+                    posY = int(centerI[1] + (disY*j/nrLineDis ))
                     line.insert(i+j+nrNewPoint,(posX,posY))
                 if nrLineDis>1:
                     nrNewPoint+=(nrLineDis-1)
@@ -367,33 +371,91 @@ class NonSlidingWindowMethod:
                 newPoint=(lastPoint[0],lastPoint[1]+self.windowSize[1])
                 line.append(newPoint)
 
-    def getNewPoint(PointSrc,PointDst,alpha):
+    def getNewPoint(PointSrc,PointDst,distance):
         distX = PointDst[0] - PointSrc[0] 
         distY = PointDst[1] - PointSrc[1]
-        newPoint = (int(PointSrc[0]+distX*alpha),int(PointSrc[1]+distY*alpha))
+
+        distR = np.sqrt(distX**2 + distY**2)
+        if distR <=10:
+            return None
+        rate = 1+distance/distR
+        newPoint = (int(PointSrc[0]+distX*rate),int(PointSrc[1]+distY*rate))
         return newPoint 
 
     def onTheImage(Point,img_size):
         return Point[0] > 0 and Point[0] < img_size[0] and  Point[1] > 0 and Point[1] < img_size[1]
+    
+    def curveNewPoint(self,PointI,PointJ,PointK):
+        disIJ_x = PointJ[0] - PointI[0]
+        disIJ_y = PointJ[1] - PointI[1]
+
+        disJK_x = PointK[0] - PointJ[0]
+        disJK_y = PointK[1] - PointJ[1]
+
+        if(disIJ_x!=0):
+            rateX = abs(disJK_x)/abs(disIJ_x)
+        else:
+            rateX = 1
+        if (disIJ_y!=0):
+            rateY = abs(disJK_y)/abs(disIJ_y)
+        else:
+            rateY = 1
+
+        newdisJK_x = rateX*disJK_x
+        newdisJK_y = rateY*disJK_y
+        
+        distance = np.sqrt(newdisJK_x**2 +newdisJK_y**2)
+        rate = 1+self.distanceLimit*2.0/distance
+
+        newPoint = (int(PointJ[0]+newdisJK_x*rate),int(PointJ[1]+newdisJK_y*rate))
+        print('Point',PointI,PointJ,PointK)
+        print('NewPoint',newPoint)
+        return newPoint
+        
+
+
+
+
     def generatingNewPoint1(self,lines,img_size):
         nrSliceInImg=int(img_size[1]/self.windowSize[1])
         for line in lines:
-            if len(line)>1:
+            if len(line)>2:
                 pointI = line[0]
                 pointJ = line[1]
-                newPoint1 = NonSlidingWindowMethod.getNewPoint(pointJ,pointI,2.0)
-                if NonSlidingWindowMethod.onTheImage(newPoint1,img_size):
+                pointK = line[2]
+                newPoint1 = NonSlidingWindowMethod.getNewPoint(pointJ,pointI,self.distanceLimit*2.0)
+                if newPoint1 is not None and NonSlidingWindowMethod.onTheImage(newPoint1,img_size):
                     line.insert(0,newPoint1)
+                
+                newPoint2 = self.curveNewPoint(pointK,pointJ,pointI)
+                if NonSlidingWindowMethod.onTheImage(newPoint2,img_size):
+                    line.insert(0,newPoint2)
                 
                 pointI = line[-2]
                 pointJ = line[-1]
-                newPoint1 = NonSlidingWindowMethod.getNewPoint(pointI,pointJ,2)
-                if NonSlidingWindowMethod.onTheImage(newPoint1,img_size):
+                newPoint1 = NonSlidingWindowMethod.getNewPoint(pointI,pointJ,self.distanceLimit*2.0)
+                if newPoint1 is not None and  NonSlidingWindowMethod.onTheImage(newPoint1,img_size):
                     line.append(newPoint1)
 
 
-
-    
+    def simplifyLines(self,lines):
+        for line in lines:
+            nrPoint =  len(line)
+            nrRemoved = 0
+            for i in range(nrPoint-1):
+                pointI = line[i-nrRemoved]
+                pointJ = line[i + 1 -nrRemoved]
+                disX = pointJ[0] - pointI[0]
+                disY = pointJ[1] - pointI[1]
+                dis = np.sqrt(disX**2 + disY**2)
+                if dis < self.distanceLimit:
+                    newPointX = (pointI[0] + pointJ[0])//2
+                    newPointY = (pointI[1] + pointJ[1])//2
+                    newPoint = (newPointX,newPointY)
+                    line[i - nrRemoved] = newPoint
+                    line.remove(pointJ)
+                    nrRemoved += 1
+                
     def nonslidingWindowMethod(self,mask,lines):
     
         img_size=(mask.shape[1],mask.shape[0])
@@ -412,25 +474,28 @@ class NonSlidingWindowMethod:
                 pos=line[i-nrRemovedPoint]
                 
                 
-                window,startX=NonSlidingWindowMethod.windowCutting(mask,pos,self.windowSize)
-                sumWhiteX=np.sum(window,axis=0)/255
+                window,startX,startY=NonSlidingWindowMethod.windowCutting(mask,pos,self.windowSize)
+                sumWhiteX = np.sum(window,axis=0)/255
+                sumWhiteY = np.sum(window,axis=1)/255
+
                 sumTotalWhite=np.sum(sumWhiteX)
                 print('SumTotal White',sumTotalWhite)
                 if sumTotalWhite>30:
-                    posX=np.average(range(len(sumWhiteX)),weights=sumWhiteX)   
+                    posX=np.average(range(len(sumWhiteX)),weights=sumWhiteX) 
+                    posY=np.average(range(len(sumWhiteY)),weights=sumWhiteY) 
                     # windowT,s= NonSlidingWindowMethod.windowCutting(mask,pos,(windowSize[0],windowSize[1]))
                     # print(windowT.shape)
                     isLine = self.lineEximiner.examine(window)
                     # isLine = True
                     if isLine:
-                        posNew=(int(startX+posX),pos[1])
+                        posNew=(int(startX+posX),int(posY+startY))
                         line[i-nrRemovedPoint]=posNew
                     else:
                         # ss=0
                         nrRemovedPoint+=1
-                        print(len(line))
+                        # print(len(line))
                         line.remove(pos)
-                        print('Fin',len(line))
+                        # print('Fin',len(line))
                 else:
                     s=0
                     nrRemovedPoint+=1
@@ -443,4 +508,5 @@ class NonSlidingWindowMethod:
                 lines.remove(line)
             print('Int',len(line))
         print('Number of lines:',len(lines))
+        self.simplifyLines(lines)
         return lines

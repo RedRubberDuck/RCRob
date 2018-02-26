@@ -21,31 +21,37 @@ class ImagePersTrans:
     # Getting the transformation matrix, the invers transformation matrix, the size of the transformated image for the first camera position
     def getPerspectiveTransformation1():
         corners_pics = np.float32([
-                [434-70,527],[1316+70,497],
+                [434,527],[1316,497],
                 [-439,899],[2532,818]])
 
-        step=45 * 10
+        
+        pxpcm = 5
+        step=45 * pxpcm
         corners_real = np.float32( [
                 [0,0],[2,0],
                 [0,2],[2,2]])*step
 
         M = cv2.getPerspectiveTransform(corners_pics,corners_real)
         M_inv = cv2.getPerspectiveTransform(corners_real,corners_pics)
-        return ImagePersTrans(M,M_inv,(int(step*2),int(step*2)))
+
+        
+
+        return ImagePersTrans(M,M_inv,(int(step*2),int(step*2))),pxpcm
     # Getting the transformation matrix, the invers transformation matrix, the size of the transformated image for the first camera position
     def getPerspectiveTransformation2():
         corners_pics = np.float32([
                 [421,214],[1354,188],
                 [-295,609],[2131,572]])
 
-        step=45*5
+        pxpcm = 5
+        step = 45*pxpcm
         corners_real = np.float32( [
                 [0,0],[2,0],
                 [0,2],[2,2]])*step
 
         M = cv2.getPerspectiveTransform(corners_pics,corners_real)
         M_inv = cv2.getPerspectiveTransform(corners_real,corners_pics)
-        return ImagePersTrans(M,M_inv,(int(step*2),int(step*2)))
+        return ImagePersTrans(M,M_inv,(int(step*2),int(step*2))),pxpcm
 
 
 class SlidingWindowMethod:

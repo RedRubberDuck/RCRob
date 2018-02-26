@@ -13,16 +13,16 @@ def main():
     # source file
     
     # inputFileName='/newRecord/move1.h264'
-    inputFileName='/record19Feb2/test50L_4.h264'
+    # inputFileName='/record19Feb2/test50L_1.h264'
     inputFileName='/f_big_50_1.h264'
     print('Processing:',inputFolder+inputFileName)
     # Video frame reader object
     videoReader = videoProc.VideoReader(inputFolder+inputFileName)
-    frameRate = 30.0
+    frameRate = 30.0 
     frameDuration = 1.0/frameRate
 
     # Perspective transformation
-    persTransformation = frameProcessor.ImagePersTrans.getPerspectiveTransformation1()
+    persTransformation,pxpcm = frameProcessor.ImagePersTrans.getPerspectiveTransformation1()
     # Frame filter to find the line
     framelineFilter = frameProcessor.frameFilter.FrameLineSimpleFilter(persTransformation)
     # Size of the iamge after perspective transformation
@@ -37,7 +37,8 @@ def main():
 
     windowSize_nonsliding=(int(newSize[1]*2/nrSlices),int(newSize[0]*2/nrSlices))
     nonslidingMethod = frameProcessor.NonSlidingWindowMethod(windowSize_nonsliding,int(newSize[0]*0.9/nrSlices))
-    lineVer = postprocess.Lines(295)
+    lineVer = postprocess.LaneVerifier(29,pxpcm)
+    lineEstimator = postprocess.LaneLineEstimator(29,pxpcm)
     # Window size 
     
     index = 0
@@ -52,6 +53,7 @@ def main():
             # drawFunction.drawWindows(birdview_mask,centerAll,windowSize)
         else:
             lines = nonslidingMethod.nonslidingWindowMethod(mask,lines)
+        lines = lineVer.checkLines(lines)
         t2 =time.time()  
         print('DDD',t2-t1)
         for line in lines:
@@ -59,9 +61,16 @@ def main():
             drawFunction.drawWindows(mask,line,windowSize)
         
         
-        lineVer.checkLines(lines)
+        
+        # linesEstimated = lineEstimator.estimateLine(lines)
+        # for line in linesEstimated:
+        #     birdview_mask=drawFunction.drawLine(mask,line)
+        #     drawFunction.drawWindows(mask,line,windowSize)
+
+
         # print(lines)
-        res = drawFunction.drawSubRegion(mask,gray,10,(10,10))
+        # res = drawFunction.drawSubRegion(mask,gray,10,(10,10))
+        res = mask
         img_show = res
 
         cv2.imshow('Frame',img_show)

@@ -1,4 +1,4 @@
-import frameProcessor, videoProc, drawFunction
+import frameProcessor, videoProc, drawFunction,postprocess
 import os, cv2 , cv2.plot,time
 import numpy as np
 
@@ -14,6 +14,7 @@ def main():
     
     # inputFileName='/newRecord/move1.h264'
     inputFileName='/record19Feb2/test50L_4.h264'
+    inputFileName='/f_big_50_1.h264'
     print('Processing:',inputFolder+inputFileName)
     # Video frame reader object
     videoReader = videoProc.VideoReader(inputFolder+inputFileName)
@@ -36,6 +37,7 @@ def main():
 
     windowSize_nonsliding=(int(newSize[1]*2/nrSlices),int(newSize[0]*2/nrSlices))
     nonslidingMethod = frameProcessor.NonSlidingWindowMethod(windowSize_nonsliding,int(newSize[0]*0.9/nrSlices))
+    lineVer = postprocess.Lines(295)
     # Window size 
     
     index = 0
@@ -49,16 +51,16 @@ def main():
             centerAll,lines = slidingMethod.apply(mask)
             # drawFunction.drawWindows(birdview_mask,centerAll,windowSize)
         else:
-            nonslidingMethod.nonslidingWindowMethod(mask,lines)
-            
-        
+            lines = nonslidingMethod.nonslidingWindowMethod(mask,lines)
+        t2 =time.time()  
+        print('DDD',t2-t1)
         for line in lines:
             birdview_mask=drawFunction.drawLine(mask,line)
             drawFunction.drawWindows(mask,line,windowSize)
         
-        t2 =time.time()
-        print('DDD',t2-t1)
         
+        lineVer.checkLines(lines)
+        # print(lines)
         res = drawFunction.drawSubRegion(mask,gray,10,(10,10))
         img_show = res
 

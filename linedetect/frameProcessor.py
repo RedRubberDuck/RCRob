@@ -97,7 +97,7 @@ class PointsConnectivity:
         self.maxYDistanceGen = windowSize[1] * 3
         # self.maxYDistanceCol = windowSize[1] * 4
         self.limitLine = np.tan(np.radians(15))
-        self.limitDistance = np.sqrt(windowSize[0]**2 + windowSize[1]**2)*5
+        self.limitDistance = np.sqrt(windowSize[0]**2 + windowSize[1]**2)*3
         
     def pointColliniarity(self,xDistAB,yDistAB,xDistBC,yDistBC):
         A = yDistBC*xDistAB - xDistBC*yDistAB
@@ -344,7 +344,7 @@ class NonSlidingWindowMethod:
                 
                 dist =  np.sqrt(disY**2 + disX**2)
                 nrLineDis=int(dist/self.distanceLimit)
-                print("NR.Lines:",nrLineDis)
+                # print("NR.Lines:",nrLineDis)
                 for j in range(1,nrLineDis):
                     posX = int(centerI[0] + (disX*j/nrLineDis ))
                     posY = int(centerI[1] + (disY*j/nrLineDis ))
@@ -357,8 +357,6 @@ class NonSlidingWindowMethod:
 
     def generatingNewPoint(self,lines,img_size):
         nrSliceInImg=int(img_size[1]/self.windowSize[1])
-        
-        
         for line in lines:
             firstPoint=line[0]
             lineFirstPoint=int(firstPoint[1]/self.windowSize[1])
@@ -408,8 +406,8 @@ class NonSlidingWindowMethod:
         rate = 1+self.distanceLimit*2.0/distance
 
         newPoint = (int(PointJ[0]+newdisJK_x*rate),int(PointJ[1]+newdisJK_y*rate))
-        print('Point',PointI,PointJ,PointK)
-        print('NewPoint',newPoint)
+        # print('Point',PointI,PointJ,PointK)
+        # print('NewPoint',newPoint)
         return newPoint
         
 
@@ -468,7 +466,7 @@ class NonSlidingWindowMethod:
         # Processing each lines
         for line in lines:
             nrPoint=len(line)
-            print('Innit',nrPoint)
+            # print('Innit',nrPoint)
             nrRemovedPoint=0
             for i in range(nrPoint):
                 pos=line[i-nrRemovedPoint]
@@ -479,7 +477,7 @@ class NonSlidingWindowMethod:
                 sumWhiteY = np.sum(window,axis=1)/255
 
                 sumTotalWhite=np.sum(sumWhiteX)
-                print('SumTotal White',sumTotalWhite)
+                # print('SumTotal White',sumTotalWhite)
                 if sumTotalWhite>30:
                     posX=np.average(range(len(sumWhiteX)),weights=sumWhiteX) 
                     posY=np.average(range(len(sumWhiteY)),weights=sumWhiteY) 
@@ -499,14 +497,14 @@ class NonSlidingWindowMethod:
                 else:
                     s=0
                     nrRemovedPoint+=1
-                    print(len(line))
+                    # print(len(line))
                     line.remove(pos)
-                    print('Fin',len(line))
+                    # print('Fin',len(line))
             #  Verify number of point in the line 
             if len(line) == 0:
                 # The line disappeared
                 lines.remove(line)
-            print('Int',len(line))
-        print('Number of lines:',len(lines))
+        #     print('Int',len(line))
+        # print('Number of lines:',len(lines))
         self.simplifyLines(lines)
         return lines

@@ -263,8 +263,8 @@ def getRotationMatrixes(img_size,angles):
 def main():
     # pics = generatePicture(14,2,90)
     inputFolder= os.path.realpath('../../resource/videos')
-    # inputFileName='/f_big_50_2.h264'
-    inputFileName='/newRecord/move2.h264'
+    inputFileName='/f_big_50_3.h264'
+    # inputFileName='/move2.h264'
     
     cap = cv2.VideoCapture(inputFolder+inputFileName)
     trans = frameProcessor.ImagePersTrans.getPerspectiveTransformation1()
@@ -281,6 +281,7 @@ def main():
     while(cap.isOpened()):
         ret, frame = cap.read()
         gray = frame
+        startTime = time.time()
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         gray1 = trans.wrapPerspective(gray)
         edges = cv2.Canny(gray1,threshold1=50, 	threshold2= 150)
@@ -296,8 +297,8 @@ def main():
 
         pics_size = (edges.shape[1],edges.shape[0])
         
-        mask_gray_birdView = cv2.adaptiveThreshold(gray_birdView,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C,cv2.THRESH_BINARY,31,-13.5)
-        mask_gray_birdView = cv2.dilate(mask_gray_birdView,np.ones((3,3)),iterations=3)
+        # mask_gray_birdView = cv2.adaptiveThreshold(gray_birdView,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C,cv2.THRESH_BINARY,31,-13.5)
+        # mask_gray_birdView = cv2.dilate(mask_gray_birdView,np.ones((3,3)),iterations=3)
 
         
         points = [] 
@@ -312,13 +313,14 @@ def main():
 
         
         # points = np.int32(points)
-        points = chechPoints(mask_gray_birdView,points)
+        # points = chechPoints(mask_gray_birdView,points)
         
         for point in points:
             # print(point)
-            cv2.circle(mask_gray_birdView,point,2,color=(123,255,255))
-
-        cv2.imshow('Lines',mask_gray_birdView)
+            cv2.circle(gray_birdView,point,2,color=(0,255,255))
+        endTime = time.time()
+        print("Duration",(endTime-startTime))
+        cv2.imshow('Lines',gray_birdView)
         if cv2.waitKey() & 0xFF == ord('q'):
             break
     

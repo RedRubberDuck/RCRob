@@ -84,10 +84,10 @@ class LaneLineEstimator:
 
 
 class LaneVerifier:
-    def __init__(self,laneWidth,pxpcm,errorRate = 0.1):
+    def __init__(self,laneWidth,pxpcm,errorCm =7):
         self.laneWidthPX = laneWidth*pxpcm
         self.pxpcm = pxpcm
-        self.errorLaneWidth = self.laneWidthPX * errorRate
+        self.errorLaneWidth = errorCm * pxpcm 
         self.inf_LaneWidth = laneWidth - self.errorLaneWidth
         self.sup_LaneWidth = laneWidth + self.errorLaneWidth
     
@@ -137,16 +137,19 @@ class LaneVerifier:
                 if ( sum_of_error < self.errorLaneWidth ):
                     linePairs.append((i,prevI))
                     if(linePairsIndex[i] is None and linePairsIndex[prevI] is None):
-                        linePairsIndex[i] = linePairsIndex[prevI] = nrPairs
+                        print()
+                        linePairsIndex[i] = nrPairs
+                        linePairsIndex[prevI] = nrPairs
                         pair = [lines[i],lines[prevI]]
+                        print('New:',pair)
                         PairsList.append(pair)
                         nrPairs += 1
                     elif(linePairsIndex[i] is None):
                         linePairsIndex[i] = linePairsIndex[prevI]
-                        PairsList[ linePairsIndex[prevI] ].append(lines[prevI])
-                    else:
+                        PairsList[ linePairsIndex[prevI] ].append(lines[i])
+                    elif (linePairsIndex[prevI] is None):
                         linePairsIndex[prevI] = linePairsIndex[i]
-                        PairsList[ linePairsIndex[i] ].append(lines[i])
+                        PairsList[ linePairsIndex[i] ].append(lines[prevI])
                     print('Line pair:(',i,',',prevI,')')
         print(linePairsIndex)
         print(PairsList)

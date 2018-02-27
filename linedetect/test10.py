@@ -12,9 +12,9 @@ def main():
     inputFolder= os.path.realpath('../../resource/videos')
     # source file
     
-    # inputFileName='/newRecord/move1.h264'
+    inputFileName='/move1.h264'
     # inputFileName='/record19Feb2/test50L_1.h264'
-    inputFileName='/f_big_50_1.h264'
+    # inputFileName='/f_big_50_2.h264'
     print('Processing:',inputFolder+inputFileName)
     # Video frame reader object
     videoReader = videoProc.VideoReader(inputFolder+inputFileName)

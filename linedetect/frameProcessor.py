@@ -1,6 +1,6 @@
 import cv2
 import numpy as np
-import frameFilter
+import frameFilter, postprocess
 
 import cv2.plot
 from matplotlib import pyplot as plt
@@ -103,7 +103,7 @@ class PointsConnectivity:
         self.maxYDistanceGen = windowSize[1] * 3
         # self.maxYDistanceCol = windowSize[1] * 4
         self.limitLine = np.tan(np.radians(15))
-        self.limitDistance = np.sqrt(windowSize[0]**2 + windowSize[1]**2)*3
+        self.limitDistance = np.sqrt(windowSize[0]**2 + windowSize[1]**2)*3.0
         
     def pointColliniarity(self,xDistAB,yDistAB,xDistBC,yDistBC):
         A = yDistBC*xDistAB - xDistBC*yDistAB
@@ -495,7 +495,7 @@ class NonSlidingWindowMethod:
                         posNew=(int(startX+posX),int(posY+startY))
                         line[i-nrRemovedPoint]=posNew
                     else:
-                        # ss=0
+                        # ss=0sumWhiteY
                         nrRemovedPoint+=1
                         # print(len(line))
                         line.remove(pos)
@@ -513,4 +513,160 @@ class NonSlidingWindowMethod:
         #     print('Int',len(line))
         # print('Number of lines:',len(lines))
         self.simplifyLines(lines)
-        return lines
+        return lines,1
+
+
+
+
+class NonSlidingWindowMethodWithPolynom:
+    def __init__(self,windowSize,distanceLimit,lineThinknessPx):
+        self.windowSize = windowSize
+        self.lineEximiner = LiniarityExaminer(inferiorCorrLimit = 0.75 ,lineThinkness = lineThinknessPx)
+        
+        self. distanceLimit = distanceLimit
+        self.supLimitNrNonZero = np.max(windowSize) * lineThinknessPx * 1.2
+        self.infLimitNrNonZero = np.min(windowSize) * lineThinknessPx * 0.1
+
+    def windowCutting(im,pos,windowSize):
+        img_size=(im.shape[1],im.shape[0])
+        startX=int(pos[0]-windowSize[0]/2)
+        endX=int(pos[0]+windowSize[0]/2)
+        
+        startY=int(pos[1]-windowSize[1]/2)
+        endY=int(pos[1]+windowSize[1]/2)
+
+        [startX,endX]=np.clip([startX,endX],0,img_size[0])
+        [startY,endY]=np.clip([startY,endY],0,img_size[1])
+        window=im[startY:endY,startX:endX]
+        return window,startX,startY
+        
+
+    def simplifyLine(self,line):
+        nrPoint =  len(line)
+        nrRemoved = 0
+        for i in range(nrPoint-1):
+            pointI = line[i-nrRemoved]
+            pointJ = line[i + 1 -nrRemoved]
+            disX = pointJ[0] - pointI[0]
+            disY = pointJ[1] - pointI[1]
+            dis = np.sqrt(disX**2 + disY**2)
+            if dis < self.distanceLimit:
+                newPointX = (pointI[0] + pointJ[0])//2
+                newPointY = (pointI[1] + pointJ[1])//2
+                newPoint = (newPointX,newPointY)
+                line[i - nrRemoved] = newPoint
+                line.remove(pointJ)
+                nrRemoved += 1
+    
+    def addFrontPoint(self,imageSize,polynomLine,nrNewPoint=3):
+        frontPoint = polynomLine.line[0]
+        for i in range(nrNewPoint):
+            dV = polynomLine.dPolynom(frontPoint[1])
+            dY = self.distanceLimit*1.5  /np.sqrt(dV**2+1)
+            newPointY = int(frontPoint[1]-dY)
+            newPointX = int(polynomLine.polynom(newPointY))
+            
+            if (newPointX > 0 and newPointX < imageSize[0]) and (newPointY > 0 and newPointY < imageSize[1]):
+                polynomLine.line.insert(0,(newPointX,newPointY))
+                frontPoint = (newPointX,newPointY)
+            else:
+                break
+    
+    def addBackPoint(self,imageSize,polynomLine,nrNewPoint=3):
+        backPoint = polynomLine.line[-1]
+        print(backPoint)
+        for i in range(nrNewPoint):
+            dV = polynomLine.dPolynom(backPoint[1])
+            
+            dY = self.distanceLimit*1.5  /np.sqrt(dV**2+1)
+            print(dY,dY*dV)
+            newPointY = int(backPoint[1]+dY)
+            newPointX = int(polynomLine.polynom(newPointY))
+            
+            if (newPointX > 0 and newPointX < imageSize[0]) and (newPointY > 0 and newPointY < imageSize[1]):
+                polynomLine.line.append((newPointX,newPointY))
+                backPoint = (newPointX,newPointY)
+                print(backPoint)
+            else:
+                break
+    
+    def addIntermediatPoint(self,polynomLine):
+        line = polynomLine.line
+        nrPoint = len(line)
+        nrNewPoint=0
+        for i in range(nrPoint-1):
+            pointI = line[i+nrNewPoint]
+            pointI1 = line[i+1+nrNewPoint]
+            
+            disY = pointI1[1] - pointI[1]
+            disX = pointI1[0] - pointI[0]
+            dist =  np.sqrt(disY**2 + disX**2)
+            
+            nrLineDis=int(dist/self.distanceLimit/1.5)
+            # print("NR.Lines:",nrLineDis)
+            for j in range(1,nrLineDis):
+                newPointY = int(pointI[1] + (disY*j/nrLineDis ))
+                newPointX = int(polynomLine.polynom(newPointY))
+                line.insert(i+j+nrNewPoint,(newPointX,newPointY))
+            if nrLineDis>1:
+                nrNewPoint+=(nrLineDis-1)
+    
+
+    def lineProcess(self,mask,polynomLine):
+        line = polynomLine.line
+        if len(line) == 0:
+            return 
+        self.addFrontPoint(mask.shape,polynomLine)
+        self.addBackPoint(mask.shape,polynomLine)
+        self.addIntermediatPoint(polynomLine)
+
+        nrPoint = len(line)
+        nrRemovedPoint = 0
+        # Check all point 
+        for index in range(nrPoint):
+            point = line[index - nrRemovedPoint]
+            # Copy the surrounding area of the point
+            window,startX,startY=NonSlidingWindowMethod.windowCutting(mask,point,self.windowSize)
+
+            histWhiteX = np.sum(window,axis=0)/255
+            histWhiteY = np.sum(window,axis=1)/255
+
+            nrNonZero = np.sum(histWhiteX)
+            if nrNonZero > self.infLimitNrNonZero and nrNonZero < self.supLimitNrNonZero:
+                isLine = self.lineEximiner.examine(window)
+                if isLine :
+                    pointX=np.average(range(len(histWhiteX)),weights=histWhiteX) 
+                    pointY=np.average(range(len(histWhiteY)),weights=histWhiteY)
+                    pointNew=(int(startX+pointX),int(pointY+startY))
+                    line[index-nrRemovedPoint]=pointNew
+                else:
+                    nrRemovedPoint+=1
+                    line.remove(point)
+            else:
+                print(nrNonZero, self.infLimitNrNonZero,self.supLimitNrNonZero)
+                nrRemovedPoint+=1
+                line.remove(point)
+        self.simplifyLine(line)
+        polynomLine.estimatePolynom(line)
+        # Check the length of the line
+
+
+                           
+
+
+
+
+    def nonslidingWindowMethod(self,mask,polynomline_dic):
+    
+        img_size=(mask.shape[1],mask.shape[0])
+        #Preprocessing each line to add new points, when the first point of the line is not in the first slice and the last point of the line is not in the last slice 
+        # self.generatingNewIntermediatePoint(lines)
+        # self.generatingNewPoint1(lines,img_size)
+        
+        for polynomline_Key in polynomline_dic:
+            self.lineProcess(mask,polynomline_dic[polynomline_Key]) 
+        
+        
+        # print('Number of lines:',len(lines))
+        # self.simplifyLines(lines)
+        return

@@ -83,86 +83,83 @@ class LaneLineEstimator:
         
 
 
-class LaneVerifier:
+
+
+class LaneVerifierBasedDistance:
     def __init__(self,laneWidth,pxpcm,errorCm =7):
         self.laneWidthPX = laneWidth*pxpcm
         self.pxpcm = pxpcm
-        self.errorLaneWidth = errorCm * pxpcm 
-        self.inf_LaneWidth = laneWidth - self.errorLaneWidth
-        self.sup_LaneWidth = laneWidth + self.errorLaneWidth
+        self.errorLaneWidthPX = errorCm * pxpcm 
     
-    def checkLines(self,lines):
-        linePairs = []
+    
+    
+    def checkDistanceBetweenLines(self,lineI, lineJ):
+        
+        nrPointI = len(lineI)
+        nrPointJ = len(lineJ)
+
+        if (nrPointI < nrPointJ):
+            lineRef = lineI
+            lineEx = lineJ
+        else:
+            lineRef = lineJ
+            lineEx = lineI
+
+        sum_of_distance = 0
+        for i in range(len(lineRef)):
+            minDis =  None
+            for j in range(len(lineEx)):
+                dist  = distance(lineRef[i],lineEx[j])
+
+                if minDis is None or minDis > dist:
+                    minDis = dist
+
+            sum_of_distance  += minDis
+        mean_of_distance = sum_of_distance/ len(lineRef)
+        return np.abs(mean_of_distance - self.laneWidthPX) < self.errorLaneWidthPX
+
+    
+    def checkLane(self,lines):
         nrLines = len(lines)
 
-        linePairsIndex = [None] * nrLines
-        PairsList = [] 
-        nrPairs = 0
+        laneIndex = [None] * nrLines
+        Lanes = [] 
+        nrLane = 0
 
         print(nrLines)
         if (nrLines <= 1):
             print('Detected nr. lines:',nrLines)
             return lines
-        verifiedLines = []
-        for i in range(0,nrLines-1):
-            
-            lineCur = lines[i]
-            nrPointCur = len(lineCur)
-            for prevI in range(i+1,nrLines):
+       
+
+        for curI in range(0,nrLines-1):
+            lineCur = lines[curI]
+            for prevI in range(curI+1,nrLines):
                 linePrev = lines[prevI]
-                nrPointPrev = len(linePrev)
-
-                sum_of_error = 0
-                # Check the distance between the points on the first Line and the second line
-                for j in range(nrPointCur):
-                    pointJ = lineCur[j] 
-                    minError = None
-                    prevError = None
-                    for k in range (nrPointPrev):
-                        pointK = linePrev[k]
-                        distanceJK = distance(pointJ,pointK)
-                        error = np.abs(distanceJK - self.laneWidthPX)
-                        # if prevError is None:
-                        #     prevError  = error
-                        # elif prevError * 1.3 < error: 
-                        #     # print("Break line Distance")
-                        #     break
-                        
-                        if minError is None or minError > error:
-                            minError = error
-                    sum_of_error += minError
-                sum_of_error /= nrPointCur
+                isPair = self.checkDistanceBetweenLines(lineCur,linePrev)
                 
-                print('Sum of error',sum_of_error / self.pxpcm ,' Limit',self.errorLaneWidth / self.pxpcm) 
-                if ( sum_of_error < self.errorLaneWidth ):
-                    linePairs.append((i,prevI))
-                    if(linePairsIndex[i] is None and linePairsIndex[prevI] is None):
-                        print()
-                        linePairsIndex[i] = nrPairs
-                        linePairsIndex[prevI] = nrPairs
-                        pair = [lines[i],lines[prevI]]
-                        print('New:',pair)
-                        PairsList.append(pair)
-                        nrPairs += 1
-                    elif(linePairsIndex[i] is None):
-                        linePairsIndex[i] = linePairsIndex[prevI]
-                        PairsList[ linePairsIndex[prevI] ].append(lines[i])
-                    elif (linePairsIndex[prevI] is None):
-                        linePairsIndex[prevI] = linePairsIndex[i]
-                        PairsList[ linePairsIndex[i] ].append(lines[prevI])
-                    print('Line pair:(',i,',',prevI,')')
-        print(linePairsIndex)
-        print(PairsList)
+                if ( isPair):
+                    if(laneIndex[curI] is None and laneIndex[prevI] is None):
+                        laneIndex[curI] = nrLane
+                        laneIndex[prevI] = nrLane
+                        Lanes.append([curI,prevI])
+                        nrLane += 1
+                    elif(laneIndex[curI] is None):
+                        laneIndex[curI] = laneIndex[prevI]
+                        Lanes[ laneIndex[prevI] ].append(curI)
+                    elif (laneIndex[prevI] is None):
+                        laneIndex[prevI] = laneIndex[curI]
+                        Lanes[ laneIndex[curI] ].append(prevI)
 
-        if(len(PairsList)==1):
-            return PairsList[0]
-        elif(len(PairsList)!=0):
-            index = getTheLargestLine(lines)
-            pairIndex = linePairsIndex[index]
-            return PairsList[pairIndex]
+
+        if(nrLane==1):
+            newLines = []
+            for index in Lanes[0]:
+                newLines.append(lines[index])
+            return newLines
         else:
-            index = getTheLargestLine(lines)
-            return [lines[index]]
+            print("Distance based lane grouping failedd!",nrLane)
+        return None 
             
 
     # def checkThePairs(self,lines,linePairsIndex):
@@ -179,7 +176,59 @@ class LaneVerifier:
 
 
                     
-                    
+
+
+
+class LineConvter:
+    
+    
+    @staticmethod
+    def TupleList2ComplexList(line):
+        newline = [] 
+        for point in line:
+            newline.append(complex(line[0],line[1]))
+        return newline
+    
+    @staticmethod
+    def TupleList2ArrayList(line):
+        return np.array(line)
+
+    @staticmethod
+    def XY2TupleList(f_x,f_y):
+        newline = [] 
+        for x,y in zip(f_x,f_y):
+            newline.append((int(x),int(y)))
+        return newline
+
+
+class PolynomLine:
+    def __init__(self,polyDeg):
+        self.polyDeg = polyDeg
+        self.polynom = None
+        self.dPolynom = None 
+        self.line = None
+    def estimatePolynom(self,line):
+        if len(line) <= self.polyDeg:
+            print("Warming: Not enough to estimate the polynom")
+            return
+        l_point_a = np.array(line)
+        l_y = l_point_a[:,1]
+        l_x = l_point_a[:,0]
+        coeff = np.polyfit(l_y,l_x,self.polyDeg) 
+        self.polynom = np.poly1d(coeff)
+        self.dPolynom = self.polynom.deriv()
+        self.line = line
+    
+    def generateLinePoint(self,line):
+        if (self.polynom is None):
+            print("Warming: Polynom wasn't initialized!")
+            return 
+        l_point_a = LineConvter.TupleList2ArrayList(line)
+        l_y = l_point_a[:,1]
+        l_x = self.polynom(l_y)
+        return LineConvter.XY2TupleList(l_x,l_y)
+
+
             
 
         

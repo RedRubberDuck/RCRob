@@ -2,8 +2,55 @@ import frameProcessor, videoProc, drawFunction,postprocess
 import os, cv2 , cv2.plot,time
 import numpy as np
 
+from matplotlib import pyplot as plt
+
+import BezierCurve
 
 
+
+
+def getPolynom(line):
+    linePoints = BezierCurve.tupleListToComplexList(line)
+    minL = np.min(np.imag(linePoints))
+    maxL = np.max(np.imag(linePoints))
+    X = np.real(linePoints)
+    Y = np.imag(linePoints)
+
+    coeff = np.polyfit(Y,X,deg=6) 
+    poly = np.poly1d(coeff)
+    dpoly = poly.deriv()
+
+    XX = poly(Y)
+    lineN = BezierCurve.XYToTuple(XX,Y)
+
+    return lineN,dpoly,[minL,maxL]
+
+def plot(dPolies,size,limits):
+    # print(limits)
+    # lowLimit = np.max(limits[:,0])
+    # highLimit = np.min(limits[:,1])
+    lowLimit = 0
+    highLimit = 400
+
+    print(lowLimit,highLimit)
+    Y = np.linspace(lowLimit,highLimit,100)
+    Dx_degs = [] 
+    for i in range(len(dPolies)):
+        Dx = dPolies[i](Y)
+        Dx_deg = np.rad2deg(  np.arctan(Dx))
+        Dx_degs.append(Dx_deg)
+        plt.plot(Y,Dx_deg)
+    plt.show()
+    
+    nrDeg = len(Dx_degs)
+    for i in range(nrDeg-1):
+        DegI = Dx_degs[i]
+        for j in range(i+1,nrDeg):
+            DegJ = Dx_degs[j]
+            error = 0
+            for k in range(len(DegI)):
+                error += np.abs(DegI[k] - DegJ[k])
+            print('Lines:',i,' ',j,' ',error/len(DegI))
 
 
 def main():
@@ -12,9 +59,9 @@ def main():
     inputFolder= os.path.realpath('../../resource/videos')
     # source file
     
-    inputFileName='/move1.h264'
-    # inputFileName='/record19Feb2/test50L_1.h264'
-    # inputFileName='/f_big_50_2.h264'
+    inputFileName='/newRecord/move9.h264'
+    # inputFileName='/record19Feb2/test50L_5.h264'
+    # inputFileName='/f_big_50_.h264'
     print('Processing:',inputFolder+inputFileName)
     # Video frame reader object
     videoReader = videoProc.VideoReader(inputFolder+inputFileName)
@@ -57,10 +104,20 @@ def main():
         t2 =time.time()  
         print('DDD',t2-t1)
         for line in lines:
-            birdview_mask=drawFunction.drawLine(mask,line)
+            # birdview_mask=drawFunction.drawLine(mask,line)
             drawFunction.drawWindows(mask,line,windowSize)
         
-        
+
+        dPolies = []
+        limits = []
+        for i in range(len(lines)-1):
+            LinePoly, dPoly, limit = getPolynom(lines[i])
+            limits.append(limit)
+            dPolies.append(dPoly)
+            drawFunction.drawLine(mask,LinePoly)
+        limits = np.array(limits)
+        plot(dPolies,newSize,limits)
+
         
         # linesEstimated = lineEstimator.estimateLine(lines)
         # for line in linesEstimated:

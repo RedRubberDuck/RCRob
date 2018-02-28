@@ -23,34 +23,27 @@ def getPolynom(line):
     XX = poly(Y)
     lineN = BezierCurve.XYToTuple(XX,Y)
 
-    return lineN,dpoly,[minL,maxL]
+    return lineN,dpoly,[minL,maxL],linePoints
 
-def plot(dPolies,size,limits):
-    # print(limits)
-    # lowLimit = np.max(limits[:,0])
-    # highLimit = np.min(limits[:,1])
-    lowLimit = 0
-    highLimit = 400
+def plot(dPolies,size,limits,lines):
 
-    print(lowLimit,highLimit)
-    Y = np.linspace(lowLimit,highLimit,100)
-    Dx_degs = [] 
-    for i in range(len(dPolies)):
-        Dx = dPolies[i](Y)
-        Dx_deg = np.rad2deg(  np.arctan(Dx))
-        Dx_degs.append(Dx_deg)
-        plt.plot(Y,Dx_deg)
+
+
+    for dPoly, line in zip(dPolies,lines):
+        Y = np.imag(line)
+        X = np.real(line)
+        nrPoint = len(Y)
+        ddX = dPoly(Y)
+        dX_deg = np.degrees(np.arctan(ddX))
+        
+        dY = Y[1:nrPoint] - Y[0:nrPoint-1]
+        dX = X[1:nrPoint] - X[0:nrPoint-1]
+        dXp = np.degrees(np.arctan(dX/dY))    
+        plt.plot(Y,dX_deg)
+
+        plt.plot(Y[0:nrPoint-1],dXp,'--')
+
     plt.show()
-    
-    nrDeg = len(Dx_degs)
-    for i in range(nrDeg-1):
-        DegI = Dx_degs[i]
-        for j in range(i+1,nrDeg):
-            DegJ = Dx_degs[j]
-            error = 0
-            for k in range(len(DegI)):
-                error += np.abs(DegI[k] - DegJ[k])
-            print('Lines:',i,' ',j,' ',error/len(DegI))
 
 
 def main():
@@ -59,9 +52,9 @@ def main():
     inputFolder= os.path.realpath('../../resource/videos')
     # source file
     
-    inputFileName='/newRecord/move9.h264'
+    inputFileName='/move14.h264'
     # inputFileName='/record19Feb2/test50L_5.h264'
-    # inputFileName='/f_big_50_.h264'
+    # inputFileName='/f_big_50_1.h264'
     print('Processing:',inputFolder+inputFileName)
     # Video frame reader object
     videoReader = videoProc.VideoReader(inputFolder+inputFileName)
@@ -84,11 +77,12 @@ def main():
 
     windowSize_nonsliding=(int(newSize[1]*2/nrSlices),int(newSize[0]*2/nrSlices))
     nonslidingMethod = frameProcessor.NonSlidingWindowMethod(windowSize_nonsliding,int(newSize[0]*0.9/nrSlices))
-    lineVer = postprocess.LaneVerifier(29,pxpcm)
+    lineVer = postprocess.LaneVerifierBasedDistance(29,pxpcm)
     lineEstimator = postprocess.LaneLineEstimator(29,pxpcm)
     # Window size 
     
     index = 0
+    polynoms = []
     for frame in videoReader.generateFrame():
 
         t1 = time.time()
@@ -97,36 +91,40 @@ def main():
         
         if index == 0 :
             centerAll,lines = slidingMethod.apply(mask)
-            # drawFunction.drawWindows(birdview_mask,centerAll,windowSize)
+            lines = lineVer.checkLane(lines)
+            for line in lines:
+                polynom = postprocess.LinePolynom(6)
+                polynoms.append(polynom)
         else:
             lines = nonslidingMethod.nonslidingWindowMethod(mask,lines)
-        lines = lineVer.checkLines(lines)
+        # lines = lineVer.checkLane(lines)
         t2 =time.time()  
         print('DDD',t2-t1)
         for line in lines:
             # birdview_mask=drawFunction.drawLine(mask,line)
             drawFunction.drawWindows(mask,line,windowSize)
+
+        # dPolies = []
+        # limits = []
+        # LinesComplex = []
+        # for i in range(len(lines)):
+        #     LinePoly, dPoly, limit,linePoints = getPolynom(lines[i])
+        #     LinesComplex . append(linePoints)
+        #     limits.append(limit)
+        #     dPolies.append(dPoly)
+        #     drawFunction.drawLine(mask,LinePoly)
+        # limits = np.array(limits)
+        # plot(dPolies,newSize,limits,LinesComplex)
+
         
-
-        dPolies = []
-        limits = []
-        for i in range(len(lines)-1):
-            LinePoly, dPoly, limit = getPolynom(lines[i])
-            limits.append(limit)
-            dPolies.append(dPoly)
-            drawFunction.drawLine(mask,LinePoly)
-        limits = np.array(limits)
-        plot(dPolies,newSize,limits)
-
-        
-        # linesEstimated = lineEstimator.estimateLine(lines)
-        # for line in linesEstimated:
-        #     birdview_mask=drawFunction.drawLine(mask,line)
-        #     drawFunction.drawWindows(mask,line,windowSize)
+        # # linesEstimated = lineEstimator.estimateLine(lines)
+        # # for line in linesEstimated:
+        # #     birdview_mask=drawFunction.drawLine(mask,line)
+        # #     drawFunction.drawWindows(mask,line,windowSize)
 
 
-        # print(lines)
-        # res = drawFunction.drawSubRegion(mask,gray,10,(10,10))
+        # # print(lines)
+        # # res = drawFunction.drawSubRegion(mask,gray,10,(10,10))
         res = mask
         img_show = res
 

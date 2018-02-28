@@ -423,17 +423,17 @@ class NonSlidingWindowMethod:
     def generatingNewPoint1(self,lines,img_size):
         nrSliceInImg=int(img_size[1]/self.windowSize[1])
         for line in lines:
-            if len(line)>2:
+            if len(line)>1:
                 pointI = line[0]
                 pointJ = line[1]
-                pointK = line[2]
+                # pointK = line[2]
                 newPoint1 = NonSlidingWindowMethod.getNewPoint(pointJ,pointI,self.distanceLimit*2.0)
                 if newPoint1 is not None and NonSlidingWindowMethod.onTheImage(newPoint1,img_size):
                     line.insert(0,newPoint1)
                 
-                newPoint2 = self.curveNewPoint(pointK,pointJ,pointI)
-                if NonSlidingWindowMethod.onTheImage(newPoint2,img_size):
-                    line.insert(0,newPoint2)
+                # newPoint2 = self.curveNewPoint(pointK,pointJ,pointI)
+                # if NonSlidingWindowMethod.onTheImage(newPoint2,img_size):
+                #     line.insert(0,newPoint2)
                 
                 pointI = line[-2]
                 pointJ = line[-1]

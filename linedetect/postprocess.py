@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+import operator
 
 
 
@@ -199,6 +200,25 @@ class LineConvter:
         for x,y in zip(f_x,f_y):
             newline.append((int(x),int(y)))
         return newline
+
+
+def LineOrderCheck(polynomLine_dic,imagesize):
+    lineTestPos_dic = {}
+    Y = imagesize[1]/2
+    for key in polynomLine_dic:
+        polynomLine = polynomLine_dic[key]
+        X = polynomLine.polynom(Y)
+        lineTestPos_dic[key]=X
+    sorted_line = sorted(lineTestPos_dic.items(), key=operator.itemgetter(1))
+
+    newPolynomLine_dic = {}
+    for index in range(len(sorted_line)):
+        key,pointX = sorted_line[index]
+        print(index,key)
+        newPolynomLine_dic[index] = polynomLine_dic[key]
+    
+    return newPolynomLine_dic
+
 
 
 class PolynomLine:

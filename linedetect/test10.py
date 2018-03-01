@@ -59,7 +59,7 @@ def main():
     inputFolder= os.path.realpath('../../resource/videos')
     # source file
     
-    inputFileName='/newRecord/move3.h264'
+    inputFileName='/newRecord/move2.h264'
     # inputFileName='/record19Feb2/test50L_5.h264'
     # inputFileName='/f_big_50_.h264'
     print('Processing:',inputFolder+inputFileName)
@@ -100,6 +100,7 @@ def main():
         if index == 0 :
             centerAll,lines = slidingMethod.apply(mask)
             lines = lineVer.checkLane(lines)
+        
 
             for index in range(len(lines)):
                 line = lines[index]
@@ -109,13 +110,14 @@ def main():
                 PolynomLines[index]=newPolyLine
                 newLine = newPolyLine.generateLinePoint(line)
                 mask=drawFunction.drawLine(mask,newLine)
+            PolynomLines = postprocess.LineOrderCheck(PolynomLines,newSize)
             # drawFunction.drawWindows(birdview_mask,centerAll,windowSize)
         else:
             nonslidingMethod.nonslidingWindowMethod(mask,PolynomLines)
-
-            for key in PolynomLines:
+            # print(PolynomLines)
+            for key in PolynomLines.keys():
                 if len(PolynomLines[key].line)>3:
-                    newLine = newPolyLine.generateLinePoint(PolynomLines[key].line)
+                    newLine = PolynomLines[key].generateLinePoint(PolynomLines[key].line)
                     mask=drawFunction.drawLine(mask,newLine)
             
         

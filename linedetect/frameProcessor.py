@@ -562,7 +562,7 @@ class NonSlidingWindowMethodWithPolynom:
         frontPoint = polynomLine.line[0]
         for i in range(nrNewPoint):
             dV = polynomLine.dPolynom(frontPoint[1])
-            dY = self.distanceLimit*1.5  /np.sqrt(dV**2+1)
+            dY = self.distanceLimit*1.0  /np.sqrt(dV**2+1)
             newPointY = int(frontPoint[1]-dY)
             newPointX = int(polynomLine.polynom(newPointY))
             
@@ -574,19 +574,19 @@ class NonSlidingWindowMethodWithPolynom:
     
     def addBackPoint(self,imageSize,polynomLine,nrNewPoint=3):
         backPoint = polynomLine.line[-1]
-        print(backPoint)
+        # print(backPoint)
         for i in range(nrNewPoint):
             dV = polynomLine.dPolynom(backPoint[1])
             
-            dY = self.distanceLimit*1.5  /np.sqrt(dV**2+1)
-            print(dY,dY*dV)
+            dY = self.distanceLimit*1.0  /np.sqrt(dV**2+1)
+            # print(dY,dY*dV)
             newPointY = int(backPoint[1]+dY)
             newPointX = int(polynomLine.polynom(newPointY))
             
             if (newPointX > 0 and newPointX < imageSize[0]) and (newPointY > 0 and newPointY < imageSize[1]):
                 polynomLine.line.append((newPointX,newPointY))
                 backPoint = (newPointX,newPointY)
-                print(backPoint)
+                # print(backPoint)
             else:
                 break
     
@@ -602,7 +602,7 @@ class NonSlidingWindowMethodWithPolynom:
             disX = pointI1[0] - pointI[0]
             dist =  np.sqrt(disY**2 + disX**2)
             
-            nrLineDis=int(dist/self.distanceLimit/1.5)
+            nrLineDis=int(dist/self.distanceLimit/1.1)
             # print("NR.Lines:",nrLineDis)
             for j in range(1,nrLineDis):
                 newPointY = int(pointI[1] + (disY*j/nrLineDis ))
@@ -643,7 +643,7 @@ class NonSlidingWindowMethodWithPolynom:
                     nrRemovedPoint+=1
                     line.remove(point)
             else:
-                print(nrNonZero, self.infLimitNrNonZero,self.supLimitNrNonZero)
+                # print(nrNonZero, self.infLimitNrNonZero,self.supLimitNrNonZero)
                 nrRemovedPoint+=1
                 line.remove(point)
         self.simplifyLine(line)

@@ -84,53 +84,13 @@ class LaneLineEstimator:
         
 
 
-<<<<<<< HEAD
-class LaneVerifierBasedDistance:
-    def __init__(self,laneWidth,pxpcm,errorCm =5):
-=======
-
 
 class LaneVerifierBasedDistance:
     def __init__(self,laneWidth,pxpcm,errorCm =7):
->>>>>>> origin/master
+
         self.laneWidthPX = laneWidth*pxpcm
         self.pxpcm = pxpcm
         self.errorLaneWidthPX = errorCm * pxpcm 
-    
-    
-    
-<<<<<<< HEAD
-
-    def checkDistanceBetweenMinLines(self,lineI,lineJ):
-        nrPointLineI = len(lineI)
-        nrPointLineJ = len(lineJ)
-        if nrPointLineI <= nrPointLineJ:
-            refLine = lineI
-            exLine  = lineJ
-        else:
-            refLine = lineJ
-            exLine  = lineI
-        
-        sum_of_dis = 0
-        for i in range(len(refLine)):
-            pointRef = refLine[i]
-            minDistance = None
-            for j in range(len(exLine)):
-                pointEx = exLine[j]
-                dis = distance(pointRef,pointEx)
-                if minDistance is None or minDistance > dis:
-                    minDistance = dis
-            sum_of_dis += minDistance
-        meanDistance = sum_of_dis/ len(refLine)
-        print(np.abs(self.laneWidthPX - meanDistance))        
-        return (np.abs(self.laneWidthPX - meanDistance) < self.errorLaneWidth)
-
-
-    def checkLane(self,lines):
-        nrLines = len(lines)
-        laneIndexforLine = [None] * nrLines
-        LaneList = [] 
-=======
     def checkDistanceBetweenLines(self,lineI, lineJ):
         
         nrPointI = len(lineI)
@@ -162,48 +122,15 @@ class LaneVerifierBasedDistance:
 
         laneIndex = [None] * nrLines
         Lanes = [] 
->>>>>>> origin/master
         nrLane = 0
 
         if (nrLines <= 1):
             print('Detected nr. lines:',nrLines)
             return lines
-<<<<<<< HEAD
-        verifiedLines = []
-=======
-       
-
->>>>>>> origin/master
         for curI in range(0,nrLines-1):
             lineCur = lines[curI]
             for prevI in range(curI+1,nrLines):
                 linePrev = lines[prevI]
-<<<<<<< HEAD
-                isLane = self.checkDistanceBetweenMinLines(lineCur,linePrev)
-                if isLane:
-                    if (laneIndexforLine[curI] is None and laneIndexforLine[prevI] is None):
-                        laneIndexforLine[curI] = nrLane
-                        laneIndexforLine[prevI] = nrLane
-                        LaneList.append([curI,prevI])
-                        nrLane += 1
-                    elif(laneIndexforLine[curI] is None):
-                        laneIndexforLine[curI] = laneIndexforLine[prevI]
-                        LaneList[laneIndexforLine[prevI]].append(curI)
-                    elif(laneIndexforLine[prevI] is None):
-                        laneIndexforLine[prevI] = laneIndexforLine[curI]
-                        LaneList[laneIndexforLine[curI]].append(prevI)
-
-        if (nrLane!=1):
-            print("Lane not found! Please check the input Image.")
-        elif len(LaneList[0])>3:
-            print("To much line detected for a lane! Please check the input Image.")
-        else:
-             newlines = []
-             for i in LaneList[0]:
-                 newlines.append(lines[i])
-        return newlines
-
-=======
                 isPair = self.checkDistanceBetweenLines(lineCur,linePrev)
                 
                 if ( isPair):
@@ -228,57 +155,7 @@ class LaneVerifierBasedDistance:
         else:
             print("Distance based lane grouping failedd!",nrLane)
         return None 
-            
->>>>>>> origin/master
-
-
-def TupleLineToComplexLine(line):
-    complexLine = []
-    for point in line:
-        complexLine.append(complex(point[0],point[1]))
-def TupleLineToArrayLine(line):
-    complexLine = []
-    for point in line:
-        complexLine.append([point[0],point[1]])
-
-def XYToTupleList(X,Y)
-    
-    line = []
-    for x,y in zip(X,Y):
-        line.append((int(x),int(y)))
-    return line
-
-class LinePolynom:
-    def __init__(self,polynomDeg):
-        self.polynomDeg = polynomDeg
-        self.poly = None
-    def estimate(self,line):
-        if len(line) < self.polynomOrder:
-            print("Not enough point!")
-            return 
-        point_a = np.array(TupleLineToArrayLine(line))
-        X = point_a[:,0]
-        Y = point_a[:,1]
-        self.poly = np.polyfit(Y,X,deg=self.polynomDeg)
-    
-    def reference(self,lines):
-        if self.poly == None:
-            print("The polynom  wasn't initialized!")
-            return 
-        point_a = np.array(TupleLineToArrayLine(line))
-        Y = point_a[:,1]
-        X = self.poly(Y)
-        return XYToTupleList(X,Y)
-
         
-
-
-    
-
-                    
-
-
-
 class LineConvter:
     
     
@@ -306,6 +183,8 @@ def LineOrderCheck(polynomLine_dic,imagesize):
     Y = imagesize[1]/2
     for key in polynomLine_dic:
         polynomLine = polynomLine_dic[key]
+        if polynomLine.polynom is None:
+            continue
         X = polynomLine.polynom(Y)
         lineTestPos_dic[key]=X
     sorted_line = sorted(lineTestPos_dic.items(), key=operator.itemgetter(1))
@@ -334,6 +213,9 @@ class PolynomLine:
         l_y = l_point_a[:,1]
         l_x = l_point_a[:,0]
         coeff = np.polyfit(l_y,l_x,self.polyDeg) 
+
+        if self.polynom  is not None:
+            coeff = (coeff + self.polynom.coef)/2
         self.polynom = np.poly1d(coeff)
         self.dPolynom = self.polynom.deriv()
         self.line = line
@@ -349,8 +231,69 @@ class PolynomLine:
 
 
             
-
+def inWindow(x,y,windowSize):
+    return ( (x > 0 and x < windowSize[0]) and (y > 0 and y < windowSize[1]))
         
+class LaneMiddleGenerator:
+    def __init__(self,laneWidthCm,pxpcm,windowSize):
+        self.laneWidthPx =  laneWidthCm * pxpcm
+        print("LaneDetector ",self.laneWidthPx)
+        self.windowSize = windowSize
+        self.nrPoint = 10
+        self.pxpcm = pxpcm
+        self.stepY = self.windowSize[1] / self.nrPoint
+    
+    def generateLine (self,polynomlines):
+        line = []
+        if(len(polynomlines)>=2):
+            
+            polynomlineLeft = polynomlines[1]
+            polynomlineMiddle = polynomlines[0]
 
+            # pointX_dic = {}
+            # pointY_dic = {}
+            for index in range(self.nrPoint):
+                pointY = self.stepY * index
+                pointX_l = []
+                pointY_l = []
+                
+                if polynomlineMiddle.polynom is not None:
+                    pointX = polynomlineMiddle.polynom(pointY)
+                    dP = polynomlineMiddle.dPolynom(pointY)
+                    dP_ = -1 / dP
+                    dY = self.laneWidthPx/2  / np.sqrt(dP_**2+1)
+                    dX = dY * dP_
 
-        
+                    if(dX<0):
+                         dX = -1*dX
+                         dY = -1*dY
+
+                    print('Dis:',np.sqrt(dX**2 + dY **2)/self.pxpcm)
+                    if inWindow(pointX,pointY,self.windowSize):
+                        pointX_l.append(pointX+dX)
+                        pointY_l.append(pointY+dY)
+                    # line.append ((int(pointX+dX),int(pointY+dY))) 
+                    # pointY = pointY + dY*2
+
+                if polynomlineLeft.polynom is not None:
+                    pointX = polynomlineLeft.polynom(pointY)
+                    dP = polynomlineLeft.dPolynom(pointY)
+                    dP_ = -1 / dP
+                    dY = self.laneWidthPx/2  / np.sqrt(dP_**2+1)
+                    dX = dY * dP_
+                    if(dX>0):
+                         dX = -1*dX
+                         dY = -1*dY
+                    print('Dis:',np.sqrt(dX**2 + dY **2)/self.pxpcm)
+                    if inWindow(pointX,pointY,self.windowSize):
+                        pointX_l.append(pointX+dX)
+                        pointY_l.append(pointY+dY)
+                if (len(pointX_l) > 0):
+                    pointX = np.mean(pointX_l)
+                    pointY = np.mean(pointY_l)
+                    line.append ((int(pointX),int(pointY))) 
+            
+            return line
+        else:
+            print(len(polynomlines))
+            return None

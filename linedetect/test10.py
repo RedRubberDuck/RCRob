@@ -52,13 +52,10 @@ def main():
     inputFolder= os.path.realpath('../../resource/videos')
     # source file
     
-<<<<<<< HEAD
-    inputFileName='/move14.h264'
-=======
-    inputFileName='/newRecord/move2.h264'
->>>>>>> origin/master
-    # inputFileName='/record19Feb2/test50L_5.h264'
-    # inputFileName='/f_big_50_1.h264'
+    # inputFileName='/move.h264'
+
+    inputFileName='/record19Feb2/test50L_2.h264'
+    inputFileName='/f_big_50_1.h264'
     print('Processing:',inputFolder+inputFileName)
     # Video frame reader object
     videoReader = videoProc.VideoReader(inputFolder+inputFileName)
@@ -74,28 +71,25 @@ def main():
     # Drawer the mask on the corner
     drawer = frameProcessor.frameFilter.TriangleMaksDrawer.cornersMaskPolygons1(newSize)
     # Sliding method 
-    nrSlices = 15
+    nrSlices = 20
     windowSize=(int(newSize[1]*2/nrSlices),int(newSize[0]/nrSlices))
     slidingMethod = frameProcessor.SlidingWindowMethod(nrSlice = nrSlices,windowSize = windowSize)
     
 
     windowSize_nonsliding=(int(newSize[1]*2/nrSlices),int(newSize[0]*2/nrSlices))
-<<<<<<< HEAD
-    nonslidingMethod = frameProcessor.NonSlidingWindowMethod(windowSize_nonsliding,int(newSize[0]*0.9/nrSlices))
-=======
+
     print('Line thinkness is ',2*pxpcm,'[PX]')
     nonslidingMethod = frameProcessor.NonSlidingWindowMethodWithPolynom(windowSize_nonsliding,int(newSize[0]*0.9/nrSlices),2*pxpcm)
->>>>>>> origin/master
+    middleGenerator = postprocess.LaneMiddleGenerator(30,pxpcm,newSize)
+
     lineVer = postprocess.LaneVerifierBasedDistance(29,pxpcm)
     lineEstimator = postprocess.LaneLineEstimator(29,pxpcm)
     # Window size 
     
     index = 0
-<<<<<<< HEAD
-    polynoms = []
-=======
+
     PolynomLines = {}
->>>>>>> origin/master
+
     for frame in videoReader.generateFrame():
 
         t1 = time.time()
@@ -104,62 +98,34 @@ def main():
         
         if index == 0 :
             centerAll,lines = slidingMethod.apply(mask)
-            lines = lineVer.checkLane(lines)
-<<<<<<< HEAD
-            for line in lines:
-                polynom = postprocess.LinePolynom(6)
-                polynoms.append(polynom)
-        else:
-            lines = nonslidingMethod.nonslidingWindowMethod(mask,lines)
-        # lines = lineVer.checkLane(lines)
-=======
-        
-
+            # lines = lineVer.checkLane(lines)
             for index in range(len(lines)):
                 line = lines[index]
-                newPolyLine = postprocess.PolynomLine(2)
+                newPolyLine = postprocess.PolynomLine(3)
                 newPolyLine.estimatePolynom(line)
                 newPolyLine.line = line
                 PolynomLines[index]=newPolyLine
                 newLine = newPolyLine.generateLinePoint(line)
-                mask=drawFunction.drawLine(mask,newLine)
+                if newLine is not None:
+                    mask=drawFunction.drawLine(mask,newLine)
             PolynomLines = postprocess.LineOrderCheck(PolynomLines,newSize)
             # drawFunction.drawWindows(birdview_mask,centerAll,windowSize)
         else:
             nonslidingMethod.nonslidingWindowMethod(mask,PolynomLines)
+            line = middleGenerator.generateLine(PolynomLines)
+            mask=drawFunction.drawLine(mask,line)
             # print(PolynomLines)
             for key in PolynomLines.keys():
                 if len(PolynomLines[key].line)>3:
                     newLine = PolynomLines[key].generateLinePoint(PolynomLines[key].line)
-                    mask=drawFunction.drawLine(mask,newLine)
+                    if newLine is not None:
+                        mask=drawFunction.drawLine(mask,newLine)
             
-        
-        
->>>>>>> origin/master
         t2 =time.time()  
         print('DDD',t2-t1)
         for line in lines:
             # birdview_mask=drawFunction.drawLine(mask,line)
             drawFunction.drawWindows(mask,line,windowSize)
-<<<<<<< HEAD
-
-        # dPolies = []
-        # limits = []
-        # LinesComplex = []
-        # for i in range(len(lines)):
-        #     LinePoly, dPoly, limit,linePoints = getPolynom(lines[i])
-        #     LinesComplex . append(linePoints)
-        #     limits.append(limit)
-        #     dPolies.append(dPoly)
-        #     drawFunction.drawLine(mask,LinePoly)
-        # limits = np.array(limits)
-        # plot(dPolies,newSize,limits,LinesComplex)
-=======
-            
-
-    
->>>>>>> origin/master
-
         
         # # linesEstimated = lineEstimator.estimateLine(lines)
         # # for line in linesEstimated:

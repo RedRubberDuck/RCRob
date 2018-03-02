@@ -616,9 +616,11 @@ class NonSlidingWindowMethodWithPolynom:
         line = polynomLine.line
         if len(line) == 0:
             return 
-        self.addFrontPoint(mask.shape,polynomLine)
-        self.addBackPoint(mask.shape,polynomLine)
-        self.addIntermediatPoint(polynomLine)
+        
+        if polynomLine.polynom is not None:
+            self.addFrontPoint(mask.shape,polynomLine)
+            self.addBackPoint(mask.shape,polynomLine)
+            self.addIntermediatPoint(polynomLine)
 
         nrPoint = len(line)
         nrRemovedPoint = 0
@@ -632,6 +634,7 @@ class NonSlidingWindowMethodWithPolynom:
             histWhiteY = np.sum(window,axis=1)/255
 
             nrNonZero = np.sum(histWhiteX)
+            # print(nrNonZero)
             if nrNonZero > self.infLimitNrNonZero and nrNonZero < self.supLimitNrNonZero:
                 isLine = self.lineEximiner.examine(window)
                 if isLine :
@@ -647,6 +650,9 @@ class NonSlidingWindowMethodWithPolynom:
                 nrRemovedPoint+=1
                 line.remove(point)
         self.simplifyLine(line)
+        if len(line) < 3:
+            polynomLine.line = []
+            return
         polynomLine.estimatePolynom(line)
         # Check the length of the line
 
@@ -664,6 +670,7 @@ class NonSlidingWindowMethodWithPolynom:
         # self.generatingNewPoint1(lines,img_size)
         
         for polynomline_Key in polynomline_dic:
+            print(polynomline_Key)
             self.lineProcess(mask,polynomline_dic[polynomline_Key]) 
         
         

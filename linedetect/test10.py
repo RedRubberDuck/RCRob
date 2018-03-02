@@ -52,10 +52,10 @@ def main():
     inputFolder= os.path.realpath('../../resource/videos')
     # source file
     
-    # inputFileName='/move.h264'
+    inputFileName='/newRecord/move4.h264'
 
-    inputFileName='/record19Feb2/test50L_2.h264'
-    inputFileName='/f_big_50_1.h264'
+    # inputFileName='/record19Feb2/test50L_6.h264'
+    # inputFileName='/f_big_50_4.h264'
     print('Processing:',inputFolder+inputFileName)
     # Video frame reader object
     videoReader = videoProc.VideoReader(inputFolder+inputFileName)
@@ -81,15 +81,16 @@ def main():
     print('Line thinkness is ',2*pxpcm,'[PX]')
     nonslidingMethod = frameProcessor.NonSlidingWindowMethodWithPolynom(windowSize_nonsliding,int(newSize[0]*0.9/nrSlices),2*pxpcm)
     middleGenerator = postprocess.LaneMiddleGenerator(30,pxpcm,newSize)
+    lineEstimator = postprocess.LineEstimatorBasedPolynom(30,pxpcm,newSize)
 
-    lineVer = postprocess.LaneVerifierBasedDistance(29,pxpcm)
-    lineEstimator = postprocess.LaneLineEstimator(29,pxpcm)
+    lineVer = postprocess.LaneVerifierBasedDistance(30,pxpcm)
+    # lineEstimator = postprocess.LaneLineEstimator(29,pxpcm)
     # Window size 
     
     index = 0
 
     PolynomLines = {}
-
+    middleline = None
     for frame in videoReader.generateFrame():
 
         t1 = time.time()
@@ -98,34 +99,48 @@ def main():
         
         if index == 0 :
             centerAll,lines = slidingMethod.apply(mask)
-            # lines = lineVer.checkLane(lines)
+            lines = lineVer.checkLane(lines)
+            # print(len(lines))
             for index in range(len(lines)):
                 line = lines[index]
-                newPolyLine = postprocess.PolynomLine(3)
+                newPolyLine = postprocess.PolynomLine(2)
                 newPolyLine.estimatePolynom(line)
                 newPolyLine.line = line
                 PolynomLines[index]=newPolyLine
                 newLine = newPolyLine.generateLinePoint(line)
                 if newLine is not None:
                     mask=drawFunction.drawLine(mask,newLine)
+            # print (PolynomLines[0])
             PolynomLines = postprocess.LineOrderCheck(PolynomLines,newSize)
-            # drawFunction.drawWindows(birdview_mask,centerAll,windowSize)
+            
         else:
+            # if len(PolynomLines.keys())==2:
+            #     PolynomLines[2] =  postprocess.PolynomLine(4)
+
+            lines,PolynomLines = lineEstimator.estimateLine(PolynomLines)
             nonslidingMethod.nonslidingWindowMethod(mask,PolynomLines)
-            line = middleGenerator.generateLine(PolynomLines)
-            mask=drawFunction.drawLine(mask,line)
+            for key in PolynomLines.keys():
+                print("Key",key,"L",len(PolynomLines[key].line))
+                drawFunction.drawWindows(mask,PolynomLines[key].line,windowSize)
+            middleline = middleGenerator.generateLine(PolynomLines,middleline)
+            
+            if middleline.line is not None:
+                mask=drawFunction.drawLine(mask,middleline.line)
+            
             # print(PolynomLines)
             for key in PolynomLines.keys():
                 if len(PolynomLines[key].line)>3:
+                    # drawFunction.drawWindows(mask,PolynomLines[key].line,windowSize)
                     newLine = PolynomLines[key].generateLinePoint(PolynomLines[key].line)
                     if newLine is not None:
                         mask=drawFunction.drawLine(mask,newLine)
             
+            
         t2 =time.time()  
-        print('DDD',t2-t1)
-        for line in lines:
-            # birdview_mask=drawFunction.drawLine(mask,line)
-            drawFunction.drawWindows(mask,line,windowSize)
+        # print('DDD',t2-t1)
+        # for line in lines:
+        #     # birdview_mask=drawFunction.drawLine(mask,line)
+        #     drawFunction.drawWindows(mask,line,windowSize)
         
         # # linesEstimated = lineEstimator.estimateLine(lines)
         # # for line in linesEstimated:

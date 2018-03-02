@@ -61,13 +61,15 @@ def drawLine(gray,lines):
     return gray
 
 def drawWindows(gray,windowsCenter,windowSize):
-    for center in windowsCenter:
+    nrPoint = len(windowsCenter)
+    print(len(windowsCenter))
+    for index in range(nrPoint):
+        center = windowsCenter[index]
         points=np.array([[[center[0]-windowSize[0]/2,center[1]-windowSize[1]/2],
                             [center[0]+windowSize[0]/2,center[1]-windowSize[1]/2],
                             [center[0]+windowSize[0]/2,center[1]+windowSize[1]/2],
                             [center[0]-windowSize[0]/2,center[1]+windowSize[1]/2]]],dtype=np.int32)
-        gray=cv2.polylines(gray,points,thickness=1,isClosed=True,color=(255,255,255))
-    return gray
+        cv2.polylines(gray,points,thickness=1,isClosed=True,color=(255,255,255))
 
 
 

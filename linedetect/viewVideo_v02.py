@@ -416,14 +416,14 @@ def main():
     # inputFolder='/home/nandi/Workspaces/Work/Python/opencvProject/Apps/pics/videos/'
     # inputFolder='C:\\Users\\aki5clj\\Documents\\PythonWorkspace\\Rpi\\Opencv\\LineDetection\\resource\\'
     inputFolder= os.path.realpath('../../resource/videos')
-    inputFileName='/record19Feb2/test50L_5.h264'
-    # inputFileName='/newRecord/move14.h264'
+    # inputFileName='/record19Feb2/test50L_5.h264'
+    inputFileName='/move14.h264'
     # inputFileName = '/f_big_50_2.h264'
     print(inputFolder+inputFileName)
     
     videoReader = videoProc.VideoReader(inputFolder+inputFileName)
     frameRate = 30
-    frameDuration = 
+    frameDuration = 1/frameRate
     # frameGenerator=videoRead(inputFolder+inputFileName)
     start=time.time()
     rate=2
@@ -469,8 +469,8 @@ def main():
         # vis = np.concatenate((frame,mask,gray), axis=1)
 
         cv2.imshow('',frame)
-        # cv2.waitKey()
-        cv2.waitKey(frameDuration)
+        cv2.waitKey()
+        # cv2.waitKey(frameDuration)
 
         index+=1
     end=time.time()

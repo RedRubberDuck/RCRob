@@ -223,12 +223,16 @@ class PolynomLine:
             # popt,pcov = scipy.optimize.curve_fit(PolynomLine.poly,l_y,l_x,p0=self.polynom.coef)
             # print((self.polynom.coef-popt))
             coeff1 = np.polyfit(l_y,l_x,self.polyDeg) 
-            error = abs(self.polynom.coef-coeff1)
-            if (error[0] < 0.001 and error[1] < 5 and error[2]<500):
+            # error = abs(self.polynom.coef-coeff1)
+            # if (error[0] < 0.001 and error[1] < 5 and error[2]<500):
+            if (coeff1[0] < np.sqrt(2)/100 ):
                 coeff = coeff1
             else:
-                print ("error:",error)
-                coeff = self.polynom.coef
+                print("Fucked")
+                return
+            # else:
+            #     print ("error:",error)
+            #     coeff = self.polynom.coef
             # coeff = (coeff*0.5 + self.polynom.coef*0.9)
         else:
             coeff = np.polyfit(l_y,l_x,self.polyDeg) 
@@ -255,13 +259,14 @@ def inWindow(x,y,windowSize):
     return ( (x > 0 and x < windowSize[0]) and (y > 0 and y < windowSize[1]))
         
 class LaneMiddleGenerator:
-    def __init__(self,laneWidthCm,pxpcm,windowSize):
+    def __init__(self,laneWidthCm,pxpcm,windowSize,polyDeg):
         self.laneWidthPx =  laneWidthCm * pxpcm
         print("LaneDetector ",self.laneWidthPx)
         self.windowSize = windowSize
-        self.nrPoint = 100
+        self.nrPoint = 20
         self.pxpcm = pxpcm
         self.stepY = self.windowSize[1] / self.nrPoint
+        self.polyDeg = polyDeg
     
     def generateLine (self,polynomlines,middleLine = None):
         line = []
@@ -271,6 +276,8 @@ class LaneMiddleGenerator:
             limitMinY = None
             limitMaxY = None
             for key in polynomlines.keys():
+                if key == 0:
+                    continue
                 if polynomlines[key].polynom is None or len(polynomlines[key].line)< polynomlines[key].polyDeg:
                     continue
                 polynomline = polynomlines[key]
@@ -296,7 +303,7 @@ class LaneMiddleGenerator:
                     limitMaxY = polynomline.lineInterval[1]  
             
             if middleLine is None:
-                middleLine = PolynomLine(2)
+                middleLine = PolynomLine(self.polyDeg)
             
             middleLine.estimatePolynom(line)
             newline = []

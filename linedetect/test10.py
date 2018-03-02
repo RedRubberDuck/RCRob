@@ -52,15 +52,17 @@ def main():
     inputFolder= os.path.realpath('../../resource/videos')
     # source file
     
-    inputFileName='/newRecord/move4.h264'
+    inputFileName='/move2.h264'
 
-    # inputFileName='/record19Feb2/test50L_6.h264'
+    # inputFileName='/record19Feb2/test50L_1.h264'
+    # inputFileName='/record19Feb/test50_8.h264'
     # inputFileName='/f_big_50_4.h264'
     print('Processing:',inputFolder+inputFileName)
     # Video frame reader object
     videoReader = videoProc.VideoReader(inputFolder+inputFileName)
     frameRate = 30.0 
     frameDuration = 1.0/frameRate
+    polyDeg = 2
 
     # Perspective transformation
     persTransformation,pxpcm = frameProcessor.ImagePersTrans.getPerspectiveTransformation1()
@@ -68,6 +70,7 @@ def main():
     framelineFilter = frameProcessor.frameFilter.FrameLineSimpleFilter(persTransformation)
     # Size of the iamge after perspective transformation
     newSize = persTransformation.size
+    print(newSize)
     # Drawer the mask on the corner
     drawer = frameProcessor.frameFilter.TriangleMaksDrawer.cornersMaskPolygons1(newSize)
     # Sliding method 
@@ -78,9 +81,9 @@ def main():
 
     windowSize_nonsliding=(int(newSize[1]*2/nrSlices),int(newSize[0]*2/nrSlices))
 
-    print('Line thinkness is ',2*pxpcm,'[PX]')
+    print('Line thinkness is ',2*pxpcm,'[PX]',pxpcm)
     nonslidingMethod = frameProcessor.NonSlidingWindowMethodWithPolynom(windowSize_nonsliding,int(newSize[0]*0.9/nrSlices),2*pxpcm)
-    middleGenerator = postprocess.LaneMiddleGenerator(30,pxpcm,newSize)
+    middleGenerator = postprocess.LaneMiddleGenerator(30,pxpcm,newSize,polyDeg)
     lineEstimator = postprocess.LineEstimatorBasedPolynom(30,pxpcm,newSize)
 
     lineVer = postprocess.LaneVerifierBasedDistance(30,pxpcm)
@@ -100,18 +103,32 @@ def main():
         if index == 0 :
             centerAll,lines = slidingMethod.apply(mask)
             lines = lineVer.checkLane(lines)
+            if lines is None:
+                continue
             # print(len(lines))
             for index in range(len(lines)):
                 line = lines[index]
-                newPolyLine = postprocess.PolynomLine(2)
+                newPolyLine = postprocess.PolynomLine(polyDeg)
                 newPolyLine.estimatePolynom(line)
                 newPolyLine.line = line
                 PolynomLines[index]=newPolyLine
                 newLine = newPolyLine.generateLinePoint(line)
                 if newLine is not None:
                     mask=drawFunction.drawLine(mask,newLine)
-            # print (PolynomLines[0])
+            print (PolynomLines)
             PolynomLines = postprocess.LineOrderCheck(PolynomLines,newSize)
+            if len(PolynomLines)<=2:
+                nrLine = 3
+                nrNewLine = nrLine-len(PolynomLines)
+                for key in range(len(PolynomLines)-1,-1,-1):
+                    PolynomLines[key+nrNewLine] = PolynomLines[key]
+                
+                for index in range(0, nrNewLine):
+                    PolynomLines[index] = postprocess.PolynomLine(polyDeg)
+            print (PolynomLines)
+            # elif len(PolynomLines)==1:
+            #     PolynomLines[1] = PolynomLines[0]
+
             
         else:
             # if len(PolynomLines.keys())==2:
@@ -124,7 +141,7 @@ def main():
                 drawFunction.drawWindows(mask,PolynomLines[key].line,windowSize)
             middleline = middleGenerator.generateLine(PolynomLines,middleline)
             
-            if middleline.line is not None:
+            if middleline is not None:
                 mask=drawFunction.drawLine(mask,middleline.line)
             
             # print(PolynomLines)
@@ -149,7 +166,7 @@ def main():
 
 
         # # print(lines)
-        # # res = drawFunction.drawSubRegion(mask,gray,10,(10,10))
+        res = drawFunction.drawSubRegion(mask,gray,10,(10,10))
         res = mask
         img_show = res
 

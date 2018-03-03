@@ -52,7 +52,8 @@ def main():
     inputFolder= os.path.realpath('../../resource/videos')
     # source file
     
-    inputFileName='/move2.h264'
+    # inputFileName='/newRecord/move4.h264'
+    inputFileName='/martie2/test3.h264'
 
     # inputFileName='/record19Feb2/test50L_1.h264'
     # inputFileName='/record19Feb/test50_8.h264'
@@ -65,7 +66,7 @@ def main():
     polyDeg = 2
 
     # Perspective transformation
-    persTransformation,pxpcm = frameProcessor.ImagePersTrans.getPerspectiveTransformation1()
+    persTransformation,pxpcm = frameProcessor.ImagePersTrans.getPerspectiveTransformation2()
     # Frame filter to find the line
     framelineFilter = frameProcessor.frameFilter.FrameLineSimpleFilter(persTransformation)
     # Size of the iamge after perspective transformation
@@ -83,10 +84,10 @@ def main():
 
     print('Line thinkness is ',2*pxpcm,'[PX]',pxpcm)
     nonslidingMethod = frameProcessor.NonSlidingWindowMethodWithPolynom(windowSize_nonsliding,int(newSize[0]*0.9/nrSlices),2*pxpcm)
-    middleGenerator = postprocess.LaneMiddleGenerator(30,pxpcm,newSize,polyDeg)
-    lineEstimator = postprocess.LineEstimatorBasedPolynom(30,pxpcm,newSize)
+    middleGenerator = postprocess.LaneMiddleGenerator(35,pxpcm,newSize)
+    lineEstimator = postprocess.LineEstimatorBasedPolynom(35,pxpcm,newSize)
 
-    lineVer = postprocess.LaneVerifierBasedDistance(30,pxpcm)
+    lineVer = postprocess.LaneVerifierBasedDistance(35,pxpcm)
     # lineEstimator = postprocess.LaneLineEstimator(29,pxpcm)
     # Window size 
     

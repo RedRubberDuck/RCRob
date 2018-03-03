@@ -41,6 +41,7 @@ class FrameLineSimpleFilter:
         thres,mask2 = cv2.threshold(gray, 140, 255, cv2.THRESH_BINARY)
         mask2 = cv2.blur(mask2,(31,31),0)
         thres,mask2 = cv2.threshold(mask2, 180, 255, cv2.THRESH_BINARY)
+        thres,mask2 = cv2.threshold(mask2, 140, 255, cv2.THRESH_BINARY)
         mask2 = cv2.dilate(mask2,np.ones((3,3)))
         mask2 = cv2.bitwise_not(mask2)
 

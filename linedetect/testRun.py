@@ -1,20 +1,25 @@
 #!/usr/bin/env python3
-import cv2, time, os
-from matplotlib import pyplot as plt
+
+import cv2
+
+import frameProcessor, videoProc, drawFunction,postprocess
+import os, cv2 , cv2.plot,time
 import numpy as np
-import time 
 
+from matplotlib import pyplot as plt
+import BezierCurve
 
-import videoProc, frameProcessor, drawFunction, postprocess
-
+import cProfile
 
 def main():
+    
+    print("Test10.py -Main-")
     # source folder
     inputFolder= os.path.realpath('../../resource/videos')
     # source file
     
     # inputFileName='/newRecord/move4.h264'
-    inputFileName='/martie2/test4.h264'
+    inputFileName='/martie2/test12.h264'
 
     # inputFileName='/record19Feb2/test50L_1.h264'
     # inputFileName='/record19Feb/test50_8.h264'
@@ -23,7 +28,7 @@ def main():
     # Video frame reader object
     videoReader = videoProc.VideoReader(inputFolder+inputFileName)
     frameRate = 30.0 
-    frameDuration = int(1.0/frameRate*1000)
+    frameDuration = 1.0/frameRate
     polyDeg = 2
 
     # Perspective transformation
@@ -36,7 +41,7 @@ def main():
     # Drawer the mask on the corner
     drawer = frameProcessor.frameFilter.TriangleMaksDrawer.cornersMaskPolygons1(newSize)
     # Sliding method 
-    nrSlices = 15
+    nrSlices = 20
     windowSize=(int(newSize[1]*2/nrSlices),int(newSize[0]/nrSlices))
     slidingMethod = frameProcessor.SlidingWindowMethod(nrSlice = nrSlices, frameSize = newSize, windowSize = windowSize)
     
@@ -44,7 +49,7 @@ def main():
     windowSize_nonsliding=(int(newSize[1]*2/nrSlices),int(newSize[0]*2/nrSlices))
 
     print('Line thinkness is ',2*pxpcm,'[PX]',pxpcm)
-    nonslidingMethod = frameProcessor.NonSlidingWindowMethodWithPolynom(windowSize_nonsliding,int(newSize[0]*0.9/nrSlices),2.5*pxpcm)
+    nonslidingMethod = frameProcessor.NonSlidingWindowMethodWithPolynom(windowSize_nonsliding,int(newSize[0]*0.9/nrSlices),2*pxpcm)
     middleGenerator = postprocess.LaneMiddleGenerator(35,pxpcm,newSize,2)
     lineEstimator = postprocess.LineEstimatorBasedPolynom(35,pxpcm,newSize)
 
@@ -56,8 +61,10 @@ def main():
     middleline = None
 
 
-    for frame in videoReader.generateFrame():
+    # with PyCallGraph(output=graphviz):
+    start = time.time()
 
+    for frame in videoReader.generateFrame():
         birdview_gray,birdview_mask = framelineFilter.apply2(frame)
         
         # It can be commanted some case. 
@@ -65,9 +72,6 @@ def main():
 
         if index == 0 :
             centerAll,lines = slidingMethod.apply(birdview_mask)
-            # print(centerAll)
-            # drawFunction.drawWindows(birdview_mask,centerAll,windowSize)    
-
             for index in range(len(lines)):
                 line = lines[index]
                 newPolyLine = postprocess.PolynomLine(polyDeg)
@@ -76,34 +80,22 @@ def main():
                 PolynomLines[index]=newPolyLine
         else:
             nonslidingMethod.nonslidingWindowMethod(birdview_mask,PolynomLines)
+
         
         index += 1 
+        # endttt = time.time()
+        # print("s",endttt-starttt)
 
 
-        for key in PolynomLines.keys():
-            drawFunction.drawLine(birdview_mask,PolynomLines[key].line)
-            drawFunction.drawWindows(birdview_mask,PolynomLines[key].line,windowSize)    
+
+    end = time.time()
+    print('Runtime:',end-start)
+
+
+
+
         
-        # gray=cv2.resize(gray,(int(gray.shape[1]/rate),int(gray.shape[0]/rate)))
-        # birdview_mask = cv2.resize(frame,(int(frame.shape[1]/rate),int(frame.shape[0]/rate)))
-        # mask = cv2.resize(mask,(int(mask.shape[1]/rate),int(mask.shape[0]/rate)))
-
-        # mask = cv2.applyColorMap(mask,cv2.COLORMAP_BONE)
-        # gray = cv2.applyColorMap(gray,cv2.COLORMAP_BONE)
-
-        # vis = np.concatenate((frame,mask,gray), axis=1)
-
-        birdview_mask=cv2.resize(birdview_mask,(birdview_mask.shape[1]+birdview_mask.shape[1],birdview_mask.shape[0]+birdview_mask.shape[0]))
-
-        cv2.imshow('',birdview_mask)
-        if cv2.waitKey(33) & 0xFF == ord('q'):
-            break
-
-        index+=1
-    end=time.time()
-    print('sss',(end-start))
-
-
-
 if __name__=='__main__':
-    main()
+    cProfile.run('main()')
+# 
+    # main()

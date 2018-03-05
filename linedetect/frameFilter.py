@@ -12,20 +12,22 @@ class FrameLineSimpleFilter:
     #   @param: ClaheClipLimit              It's a clip limit value, used by the CLACHE method
     #   @param: ClahetileGridSize           It's a grid size, used by the CLACHE method
     #   @param: kernelSize                  It's a kernel size for filtering the image.
-    def __init__(self,perspectiveTrans,ClaheClipLimit=3.0,ClahetileGridSize=(46,46),kernelSize=21):
+    def __init__(self,perspectiveTrans,ClaheClipLimit=3.0,ClahetileGridSize=(46,46),kernelSize=6):
         self.clahe = cv2.createCLAHE(clipLimit=ClaheClipLimit, tileGridSize=ClahetileGridSize)
         self.perspectiveTrans = perspectiveTrans
         self.kernelSize=kernelSize
+
+        self.kernel = cv2.getGaussianKernel(kernelSize,0)
     
     ## Apply function = + conver to Gray + histogramEqualize + perspectiveTransform + filtering +thresholding
     #   @param: frame                       The input frame, which will be processed
     #   @param: useClahe                    It's a flag tobe used the CLACHE or a simple histogram equalisation 
-    def apply(self,frame,useClahe=True):
+    def apply(self,frame,useClahe=False):
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        if (useClahe):
-            gray = self.clahe.apply(gray)
-        else:
-             gray = cv2.equalizeHist(gray)
+        # if (useClahe):
+        #     gray = self.clahe.apply(gray)
+        # else:
+        #      gray = cv2.equalizeHist(gray)
         birdviewGray = self.perspectiveTrans.wrapPerspective(gray)
         # gray = cv2.resize(gray,(birdviewGray.shape[1],birdviewGray.shape[0]))
 
@@ -40,12 +42,11 @@ class FrameLineSimpleFilter:
 
         thres,mask2 = cv2.threshold(gray, 140, 255, cv2.THRESH_BINARY)
         mask2 = cv2.blur(mask2,(31,31),0)
-        thres,mask2 = cv2.threshold(mask2, 180, 255, cv2.THRESH_BINARY)
         thres,mask2 = cv2.threshold(mask2, 140, 255, cv2.THRESH_BINARY)
         mask2 = cv2.dilate(mask2,np.ones((3,3)))
         mask2 = cv2.bitwise_not(mask2)
 
-        mask= cv2.adaptiveThreshold(grayf,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C,cv2.THRESH_BINARY,31,-13.5)
+        mask= cv2.adaptiveThreshold(grayf,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C,cv2.THRESH_BINARY,91,-43.5)
         # mask= cv2.adaptiveThreshold(grayf,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C,cv2.THRESH_BINARY,31*2+1,-13.5*1.5)
         res = cv2.bitwise_and(mask,mask2)
         mask_inv = cv2.bitwise_not(mask)
@@ -55,6 +56,24 @@ class FrameLineSimpleFilter:
         
         return res,mask,mask2
 
+    def grayscale(self,b,g,r):
+        print(b,g,r)
+        return int(0.299*r+0.587*g+0.114*b)
+
+    def apply3(self,frame):
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        birdviewGray = self.perspectiveTrans.wrapPerspective(gray)
+        imgMasked=self.filter2(birdviewGray)
+        return gray,imgMasked
+
+
+    def apply2(self,frame):
+        birdview_color = self.perspectiveTrans.wrapPerspective(frame)
+        birdviewGray = cv2.cvtColor(birdview_color, cv2.COLOR_BGR2GRAY)
+        mask= cv2.adaptiveThreshold(birdviewGray,255,cv2.ADAPTIVE_THRESH_MEAN_C,cv2.THRESH_BINARY,11,-10.5)
+
+        return birdview_color,mask
+    
 
 class TriangleMaksDrawer:
     def __init__(self,polygons):

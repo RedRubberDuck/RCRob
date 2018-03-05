@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import frameProcessor, videoProc, drawFunction,postprocess
 import os, cv2 , cv2.plot,time
 import numpy as np
@@ -55,7 +56,7 @@ def main():
     # inputFileName='/newRecord/move4.h264'
     inputFileName='/martie2/test3.h264'
 
-    # inputFileName='/record19Feb2/test50L_1.h264'
+    # inputFileName='/record19Feb/test50L_1.h264'
     # inputFileName='/record19Feb/test50_8.h264'
     # inputFileName='/f_big_50_4.h264'
     print('Processing:',inputFolder+inputFileName)
@@ -75,21 +76,19 @@ def main():
     # Drawer the mask on the corner
     drawer = frameProcessor.frameFilter.TriangleMaksDrawer.cornersMaskPolygons1(newSize)
     # Sliding method 
-    nrSlices = 20
+    nrSlices = 15
     windowSize=(int(newSize[1]*2/nrSlices),int(newSize[0]/nrSlices))
-    slidingMethod = frameProcessor.SlidingWindowMethod(nrSlice = nrSlices,windowSize = windowSize)
+    slidingMethod = frameProcessor.SlidingWindowMethod(nrSlice = nrSlices,frameSize=newSize,windowSize = windowSize)
     
 
     windowSize_nonsliding=(int(newSize[1]*2/nrSlices),int(newSize[0]*2/nrSlices))
 
     print('Line thinkness is ',2*pxpcm,'[PX]',pxpcm)
     nonslidingMethod = frameProcessor.NonSlidingWindowMethodWithPolynom(windowSize_nonsliding,int(newSize[0]*0.9/nrSlices),2*pxpcm)
-    middleGenerator = postprocess.LaneMiddleGenerator(35,pxpcm,newSize)
+    middleGenerator = postprocess.LaneMiddleGenerator(35,pxpcm,newSize,2)
     lineEstimator = postprocess.LineEstimatorBasedPolynom(35,pxpcm,newSize)
 
     lineVer = postprocess.LaneVerifierBasedDistance(35,pxpcm)
-    # lineEstimator = postprocess.LaneLineEstimator(29,pxpcm)
-    # Window size 
     
     index = 0
 
@@ -98,7 +97,7 @@ def main():
     for frame in videoReader.generateFrame():
 
         t1 = time.time()
-        gray,birdview_gray,birdview_mask,mask,mask1 = framelineFilter.apply(frame)
+        birdview_gray,mask = framelineFilter.apply2(frame)
         mask = drawer.draw(mask)
         
         if index == 0 :
@@ -116,7 +115,7 @@ def main():
                 newLine = newPolyLine.generateLinePoint(line)
                 if newLine is not None:
                     mask=drawFunction.drawLine(mask,newLine)
-            print (PolynomLines)
+            # print (PolynomLines)
             PolynomLines = postprocess.LineOrderCheck(PolynomLines,newSize)
             if len(PolynomLines)<=2:
                 nrLine = 3
@@ -126,9 +125,17 @@ def main():
                 
                 for index in range(0, nrNewLine):
                     PolynomLines[index] = postprocess.PolynomLine(polyDeg)
-            print (PolynomLines)
-            # elif len(PolynomLines)==1:
-            #     PolynomLines[1] = PolynomLines[0]
+            # print (PolynomLines)
+            if len(PolynomLines)<=2:
+                nrLine = 3
+                nrNewLine = nrLine-len(PolynomLines)
+                for key in range(len(PolynomLines)-1,-1,-1):
+                    PolynomLines[key+nrNewLine] = PolynomLines[key]
+                
+                for index in range(0, nrNewLine):
+                    PolynomLines[index] = postprocess.PolynomLine(polyDeg)
+            # print (PolynomLines)
+
 
             
         else:
@@ -138,7 +145,7 @@ def main():
             lines,PolynomLines = lineEstimator.estimateLine(PolynomLines)
             nonslidingMethod.nonslidingWindowMethod(mask,PolynomLines)
             for key in PolynomLines.keys():
-                print("Key",key,"L",len(PolynomLines[key].line))
+                # print("Key",key,"L",len(PolynomLines[key].line))
                 drawFunction.drawWindows(mask,PolynomLines[key].line,windowSize)
             middleline = middleGenerator.generateLine(PolynomLines,middleline)
             
@@ -167,7 +174,7 @@ def main():
 
 
         # # print(lines)
-        res = drawFunction.drawSubRegion(mask,gray,10,(10,10))
+        # res = drawFunction.drawSubRegion(mask,gray,10,(10,10))
         res = mask
         img_show = res
 

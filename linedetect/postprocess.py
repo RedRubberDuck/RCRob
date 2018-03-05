@@ -127,7 +127,7 @@ class LaneVerifierBasedDistance:
         nrLane = 0
 
         if (nrLines <= 1):
-            print('Detected nr. lines:',nrLines)
+            # print('Detected nr. lines:',nrLines)
             return lines
         for curI in range(0,nrLines-1):
             lineCur = lines[curI]
@@ -150,7 +150,7 @@ class LaneVerifierBasedDistance:
 
 
         if(nrLane==1):
-            print("Line",Lanes[0])
+            # print("Line",Lanes[0])
             newLines = []
             for index in Lanes[0]:
                 newLines.append(lines[index])
@@ -219,23 +219,24 @@ class PolynomLine:
 
         
 
-        if self.polynom  is not None:
+        # if self.polynom  is not None:
             # popt,pcov = scipy.optimize.curve_fit(PolynomLine.poly,l_y,l_x,p0=self.polynom.coef)
             # print((self.polynom.coef-popt))
-            coeff1 = np.polyfit(l_y,l_x,self.polyDeg) 
+        coeff1 = np.polyfit(l_y,l_x,self.polyDeg) 
             # error = abs(self.polynom.coef-coeff1)
             # if (error[0] < 0.001 and error[1] < 5 and error[2]<500):
-            if (coeff1[0] < np.sqrt(2)/100 ):
-                coeff = coeff1
-            else:
-                print("Fucked")
-                return
+        # print('Min-R:',abs(1/(2*coeff1[0])))
+        if (abs(1/(2*coeff1[0])) > 100):
+            coeff = coeff1
+        else:
+            print("Fucked")
+            return
             # else:
             #     print ("error:",error)
             #     coeff = self.polynom.coef
             # coeff = (coeff*0.5 + self.polynom.coef*0.9)
-        else:
-            coeff = np.polyfit(l_y,l_x,self.polyDeg) 
+        # else:
+        #     coeff = np.polyfit(l_y,l_x,self.polyDeg) 
         self.polynom = np.poly1d(coeff)
         self.dPolynom = self.polynom.deriv()
         self.line = line
@@ -322,7 +323,7 @@ class LaneMiddleGenerator:
             
             return middleLine
         else:
-            print(len(polynomlines))
+            # print(len(polynomlines))
             return None
 
 
@@ -347,7 +348,7 @@ class LineEstimatorBasedPolynom:
         if maxLen is None :
             print("It wasn't detect any line")
             return [],polynomlines
-        print(nonLineKey,maxKey)
+        # print(nonLineKey,maxKey)
 
         largestLine = polynomlines[maxKey].line
         for key in nonLineKey:
@@ -360,7 +361,7 @@ class LineEstimatorBasedPolynom:
         line = []
 
         # distanceBetweenLine = np.abs(keyDiff) * self.laneWidthPx
-        print('KeyDiff:',keyDiff)
+        # print('KeyDiff:',keyDiff)
         for index in range(len(largestLine)-1):
             pointI = largestLine[index]
             pointI1 = largestLine[index-1]

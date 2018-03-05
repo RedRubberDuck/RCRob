@@ -42,8 +42,9 @@ class ImagePersTrans:
         corners_pics = np.float32([
                 [421,214],[1354,188],
                 [-295,609],[2131,572]])
+        # corners_pics /= 2
 
-        pxpcm = 5
+        pxpcm = 2
         step = 45*pxpcm
         corners_real = np.float32( [
                 [0,0],[2,0],
@@ -55,11 +56,14 @@ class ImagePersTrans:
 
 
 class SlidingWindowMethod:
-    def __init__(self,nrSlice,windowSize):
+    def __init__(self,nrSlice,frameSize,windowSize):
         self.nrSlice = nrSlice
         self.windowSize = windowSize 
-        self.histogramProc = HistogramProcess(0.002777778,0.023570226,lineThinkness =  12*2,xDistanceLimit = windowSize[0]//2)
-        self.liniarityExaminer = LiniarityExaminer(inferiorCorrLimit = 0.9, lineThinkness = 12*2)
+
+        partSize = (frameSize[0], frameSize[1]//nrSlice)
+        print('Window size:',windowSize,'Part size:',partSize)
+        self.histogramProc = HistogramProcess(0.002777778,0.023570226,lineThinkness =  2*5,xDistanceLimit = windowSize[0]//2,partSize=partSize)
+        self.liniarityExaminer = LiniarityExaminer(inferiorCorrLimit = 0.9, lineThinkness = 2*5)
         self.pointConnectivity = PointsConnectivity(windowSize)
     def apply(self,img_bin):
         img_size=(img_bin.shape[1],img_bin.shape[0])
@@ -69,7 +73,7 @@ class SlidingWindowMethod:
             yPos=int(img_size[1]*(i+0.5)/self.nrSlice)
             windowsCenter=self.histogramProc.histogramMethod(part,yPos)
             windowsCenterAll+=windowsCenter
-        windowsCenterAll = self.pointsLineVerifying(img_bin,windowsCenterAll)
+        # windowsCenterAll = self.pointsLineVerifying(img_bin,windowsCenterAll)
         lines = self.pointConnectivity.connectPoint(windowsCenterAll)
         return windowsCenterAll,lines
 
@@ -238,21 +242,20 @@ class LiniarityExaminer:
 
 
 class HistogramProcess:
-    def __init__(self,inferiorRate,superiorRate,lineThinkness,xDistanceLimit):
+    def __init__(self,inferiorRate,superiorRate,lineThinkness,xDistanceLimit,partSize):
         self.superiorRate = superiorRate
         self.inferiorRate = inferiorRate
         self.xDistanceLimit = xDistanceLimit
         # self.lineThinkness = lineThinkness
         self.kernel =  (np.ones((1,lineThinkness))/lineThinkness)[0,:]
+        self.partSize  = partSize
+        partArea = partSize[1]*partSize[0]
+
+        self.inferiorLimitSize = partArea * self.inferiorRate
+        self.superiorLimitSize = partArea * self.superiorRate
 
     def histogramMethod(self,part,yPos):
         windowscenter=[]
-        part_size=(part.shape[1],part.shape[0])
-        #Limit calculation
-        slice_size=part_size[1]*part_size[0]
-        
-        inferiorLimitSize = slice_size*self.inferiorRate
-        superiorLimitSize = slice_size*self.superiorRate
 
         #Calculating histogram
         histogram=np.sum(part,axis=0)/255
@@ -263,20 +266,22 @@ class HistogramProcess:
 
         accumulate=0
         accumulatePos=0
-        accumulate_a=[]
-        for i in range(part_size[0]):
+        startPx = 0
+        # accumulate_a=[]
+        for i in range(1,self.partSize[0]):
             #The non-zero block
             if histogram_f[i]>0:
-                accumulate+=histogram_f[i]
-                accumulate_a.append(accumulate)
-                accumulatePos+=histogram_f[i]*i
+                if histogram_f[i-1]==0:
+                    startPx = i
+                accumulate += histogram_f[i]
+                # accumulatePos += histogram_f[i]*i
                 
             # The end of a non-zero block
             elif histogram_f[i]==0 and histogram_f[i-1]>0:
                 
-                if accumulate<superiorLimitSize and accumulate>inferiorLimitSize:
+                if accumulate<self.superiorLimitSize and accumulate> self.inferiorLimitSize:
                     #Calculating the middlsuperiorLimitSizee of the non-zero block
-                    indexP=int(accumulatePos/accumulate)
+                    indexP=int((startPx+i)/2)
                     #Verify the distance from the last non-zeros block
                     if (len(windowscenter)>0 and abs(windowscenter[-1][0]-indexP)<self.xDistanceLimit):
                         #If the distance is smaller than the threshold, then combines it.
@@ -286,13 +291,9 @@ class HistogramProcess:
                         # Add to the list of the windowsCenters
                         windowscenter.append((indexP,yPos))
                 accumulate=0
-                accumulatePos=0
-            accumulate_a.append(accumulate)
-                
-
-        plotObj = cv2.plot.Plot2d_create(-histogram)
-        plotObj.setPlotSize(part_size[0],int(np.max(histogram)))
+                # accumulatePos=0
         return windowscenter
+
 
 
 def generatingNewPosition(lines,windowYSize):
@@ -525,7 +526,7 @@ class NonSlidingWindowMethodWithPolynom:
         
         self. distanceLimit = distanceLimit
         self.supLimitNrNonZero = np.max(windowSize) * lineThinknessPx * 1.2
-        self.infLimitNrNonZero = np.min(windowSize) * lineThinknessPx * 0.1
+        self.infLimitNrNonZero = np.min(windowSize) * lineThinknessPx * 0.6
 
     def windowCutting(im,pos,windowSize):
         img_size=(im.shape[1],im.shape[0])
@@ -670,7 +671,7 @@ class NonSlidingWindowMethodWithPolynom:
         # self.generatingNewPoint1(lines,img_size)
         
         for polynomline_Key in polynomline_dic:
-            print(polynomline_Key)
+            # print(polynomline_Key)
             self.lineProcess(mask,polynomline_dic[polynomline_Key]) 
         
         

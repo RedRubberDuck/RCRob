@@ -57,12 +57,12 @@ def drawLine(gray,lines):
     for i in range(0,nrLines-1):
         startpoint=lines[i]
         endPoint=lines[i+1]
-        cv2.line(gray,startpoint,endPoint,thickness=1,color=(125,255,255))
+        cv2.line(gray,(startpoint[0],startpoint[1]),(endPoint[0],endPoint[1]),thickness=1,color=(125,255,255))
     return gray
 
 def drawWindows(gray,windowsCenter,windowSize):
     nrPoint = len(windowsCenter)
-    print(len(windowsCenter))
+    # print(len(windowsCenter))
     for index in range(nrPoint):
         center = windowsCenter[index]
         points=np.array([[[center[0]-windowSize[0]/2,center[1]-windowSize[1]/2],

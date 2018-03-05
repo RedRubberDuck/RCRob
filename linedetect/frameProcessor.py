@@ -44,7 +44,7 @@ class ImagePersTrans:
                 [-295,609],[2131,572]])
         # corners_pics /= 2
 
-        pxpcm = 2
+        pxpcm = 4
         step = 45*pxpcm
         corners_real = np.float32( [
                 [0,0],[2,0],
@@ -90,7 +90,7 @@ class SlidingWindowMethod:
             # 
             part=frame[limitsY[0]:limitsY[1],limitsX[0]:limitsX[1]]
 
-            isline=self.liniarityExaminer.examine(part,verticalTest = False)
+            isline,point=self.liniarityExaminer.examine(part,verticalTest = False)
 
             if isline:
                 points_.append(point)
@@ -219,22 +219,18 @@ class LiniarityExaminer:
             if startX == endX:
                 startX = 0
                 endX = frame_size[0]
-
-            # cv2.imshow('ss',frame[:,startX:endX])
-            # cv2.waitKey()
-            # Getting the non-zero coordinates in the window
-            Y,X=np.nonzero(frame[:,startX:endX])
-            # Verifying the number of non-zero points
-            if(X.shape[0]<3):
-                # print("S:",X.shape)
-                return False
-            # Standard deviation calculating
-            StdX=np.std(X)
-            StdY=np.std(Y)
-            # Pearson/Spearman correlation coefficients 
-            corrCoef=np.corrcoef(Y,X)[0,1]
+            points = cv2.findNonZero(frame[:,startX:endX]) 
+            stdDev = cv2.meanStdDev(points)[1]
+            points = np.array(points[:,0,:],dtype=np.float)
+            mean = None
+            res2 = cv2.calcCovarMatrix(points,mean,cv2.COVAR_ROWS +cv2.COVAR_NORMAL)
+            covM = res2 [0]
+            corrCoef = covM[0,1]/covM[0,0]
+            
+            point = res2[1][0,0]+startX,res2[1][0,1]
             # Verifying the Pearson correlation coffecients, the vertical line or the horizontal line
-            return (np.abs(corrCoef)>self.inferiorCorrLimit) or (horizontalTest and StdX<self.lineThinkness*0.341 and StdY>frame_size[1]*0.22) or  (verticalTest and StdX>frame_size[0]*0.22 and StdY<self.lineThinkness*0.341)
+            isLinear = (np.abs(corrCoef)>self.inferiorCorrLimit) or (horizontalTest and stdDev[0]<self.lineThinkness*0.341 and stdDev[1]>frame_size[1]*0.22) or  (verticalTest and stdDev[0]>frame_size[0]*0.22 and stdDev[1]<self.lineThinkness*0.341)
+            return isLinear,point
         except Exception as e:
             print("Except",e)
             return False
@@ -490,9 +486,10 @@ class NonSlidingWindowMethod:
                     posY=np.average(range(len(sumWhiteY)),weights=sumWhiteY) 
                     # windowT,s= NonSlidingWindowMethod.windowCutting(mask,pos,(windowSize[0],windowSize[1]))
                     # print(windowT.shape)
-                    isLine = self.lineEximiner.examine(window)
+                    isLine,point = self.lineEximiner.examine(window)
                     # isLine = True
                     if isLine:
+                        print(posX,posY,point)
                         posNew=(int(startX+posX),int(posY+startY))
                         line[i-nrRemovedPoint]=posNew
                     else:
@@ -613,6 +610,16 @@ class NonSlidingWindowMethodWithPolynom:
                 nrNewPoint+=(nrLineDis-1)
     
 
+
+
+    def checkPoint(self,point,image):
+        window,startX,startY=NonSlidingWindowMethod.windowCutting(image,point,self.windowSize)
+        histWhiteX = np.sum(window,axis=0)/255
+        histWhiteY = np.sum(window,axis=1)/255        
+        
+
+
+    
     def lineProcess(self,mask,polynomLine):
         line = polynomLine.line
         if len(line) == 0:
@@ -631,17 +638,14 @@ class NonSlidingWindowMethodWithPolynom:
             # Copy the surrounding area of the point
             window,startX,startY=NonSlidingWindowMethod.windowCutting(mask,point,self.windowSize)
 
-            histWhiteX = np.sum(window,axis=0)/255
-            histWhiteY = np.sum(window,axis=1)/255
 
-            nrNonZero = np.sum(histWhiteX)
-            # print(nrNonZero)
+            nrNonZero = cv2.countNonZero(window)
+            # print(nrNonZero
             if nrNonZero > self.infLimitNrNonZero and nrNonZero < self.supLimitNrNonZero:
-                isLine = self.lineEximiner.examine(window)
+                isLine,pointPlus = self.lineEximiner.examine(window)
                 if isLine :
-                    pointX=np.average(range(len(histWhiteX)),weights=histWhiteX) 
-                    pointY=np.average(range(len(histWhiteY)),weights=histWhiteY)
-                    pointNew=(int(startX+pointX),int(pointY+startY))
+                    
+                    pointNew=(int(startX+pointPlus[0]),int(startY+pointPlus[1]))
                     line[index-nrRemovedPoint]=pointNew
                 else:
                     nrRemovedPoint+=1

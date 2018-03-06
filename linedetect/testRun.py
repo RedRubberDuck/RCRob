@@ -51,8 +51,8 @@ def main():
     print('Line thinkness is ',2*pxpcm,'[PX]',pxpcm)
     nonslidingMethod = frameProcessor.NonSlidingWindowMethodWithPolynom(windowSize_nonsliding,int(newSize[0]*0.9/nrSlices),2*pxpcm)
     middleGenerator = postprocess.LaneMiddleGenerator(35,pxpcm,newSize,2)
+    
     lineEstimator = postprocess.LineEstimatorBasedPolynom(35,pxpcm,newSize)
-
     lineVer = postprocess.LaneVerifierBasedDistance(35,pxpcm)
     
     index = 0

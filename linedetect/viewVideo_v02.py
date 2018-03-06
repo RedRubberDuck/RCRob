@@ -14,7 +14,7 @@ def main():
     # source file
     
     # inputFileName='/newRecord/move4.h264'
-    inputFileName='/martie2/test4.h264'
+    inputFileName='/martie2/test12.h264'
 
     # inputFileName='/record19Feb2/test50L_1.h264'
     # inputFileName='/record19Feb/test50_8.h264'
@@ -83,16 +83,6 @@ def main():
         for key in PolynomLines.keys():
             drawFunction.drawLine(birdview_mask,PolynomLines[key].line)
             drawFunction.drawWindows(birdview_mask,PolynomLines[key].line,windowSize)    
-        
-        # gray=cv2.resize(gray,(int(gray.shape[1]/rate),int(gray.shape[0]/rate)))
-        # birdview_mask = cv2.resize(frame,(int(frame.shape[1]/rate),int(frame.shape[0]/rate)))
-        # mask = cv2.resize(mask,(int(mask.shape[1]/rate),int(mask.shape[0]/rate)))
-
-        # mask = cv2.applyColorMap(mask,cv2.COLORMAP_BONE)
-        # gray = cv2.applyColorMap(gray,cv2.COLORMAP_BONE)
-
-        # vis = np.concatenate((frame,mask,gray), axis=1)
-
         birdview_mask=cv2.resize(birdview_mask,(birdview_mask.shape[1]+birdview_mask.shape[1],birdview_mask.shape[0]+birdview_mask.shape[0]))
 
         cv2.imshow('',birdview_mask)

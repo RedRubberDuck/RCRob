@@ -5,7 +5,6 @@ import frameProcessor, videoProc, drawFunction,postprocess
 
 class LaneDetector:
 
-
     def __init__(self):
         persTransformation,pxpcm = frameProcessor.ImagePersTrans.getPerspectiveTransformation2()
         self.pxpcm = pxpcm
@@ -17,14 +16,13 @@ class LaneDetector:
         self.nrSlices = 20
         windowSize=(int(self.birdviewImage_size[1]*2/self.nrSlices),int(self.birdviewImage_size[0]/self.nrSlices))
         self.slidingMethod = frameProcessor.SlidingWindowMethod(nrSlice = self.nrSlices, frameSize = self.birdviewImage_size, windowSize = windowSize)
-        windowSize_nonsliding=(int(self.birdviewImage_size[1]*2/self.nrSlices),int(self.birdviewImage_size[0]*2/self.nrSlices))
-        self.nonslidingMethod = frameProcessor.NonSlidingWindowMethodWithPolynom(windowSize_nonsliding,int(self.birdviewImage_size[0]*0.9/self.nrSlices),2*pxpcm)
+        self.windowSize_nonsliding = (int(self.birdviewImage_size[1]*2/self.nrSlices),int(self.birdviewImage_size[0]*2/self.nrSlices))
+        self.nonslidingMethod = frameProcessor.NonSlidingWindowMethodWithPolynom(self.windowSize_nonsliding,int(self.birdviewImage_size[0]*0.9/self.nrSlices),2*pxpcm)
         self.PolynomLines = {}
         self.middleline = None
         self.frameNo = -1
 
         self.polyDeg = 2
-
         self.frameProcessMethod = self.slidingMethodFnc
 
         
@@ -52,5 +50,6 @@ class LaneDetector:
         birdview_gray,birdview_mask = self.frameFilter.apply2(frame)
         birdview_mask = self.triangleMaskdrawer.draw(birdview_mask)
         self.frameProcessMethod(birdview_mask)
+        return birdview_mask
 
 

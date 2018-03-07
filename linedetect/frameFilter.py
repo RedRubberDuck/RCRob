@@ -60,14 +60,14 @@ class FrameLineSimpleFilter:
         print(b,g,r)
         return int(0.299*r+0.587*g+0.114*b)
 
-    def apply3(self,frame):
+    def apply2(self,frame):
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         birdviewGray = self.perspectiveTrans.wrapPerspective(gray)
-        thes,imgMasked=cv2.threshold(birdviewGray, 130, 255, cv2.THRESH_BINARY)
+        imgMasked= cv2.adaptiveThreshold(birdviewGray,255,cv2.ADAPTIVE_THRESH_MEAN_C,cv2.THRESH_BINARY,11,-10.5)
         return gray,imgMasked
 
 
-    def apply2(self,frame):
+    def apply3(self,frame):
         birdview_color = self.perspectiveTrans.wrapPerspective(frame)
         birdviewGray = cv2.cvtColor(birdview_color, cv2.COLOR_BGR2GRAY)
         mask= cv2.adaptiveThreshold(birdviewGray,255,cv2.ADAPTIVE_THRESH_MEAN_C,cv2.THRESH_BINARY,11,-10.5)

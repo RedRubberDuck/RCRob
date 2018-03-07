@@ -54,7 +54,7 @@ def main():
     # source file
     
     # inputFileName='/newRecord/move4.h264'
-    inputFileName='/martie2/test3.h264'
+    inputFileName='/martie2/test3s.h264'
 
     # inputFileName='/record19Feb/test50L_1.h264'
     # inputFileName='/record19Feb/test50_8.h264'
@@ -125,16 +125,6 @@ def main():
                 
                 for index in range(0, nrNewLine):
                     PolynomLines[index] = postprocess.PolynomLine(polyDeg)
-            # print (PolynomLines)
-            if len(PolynomLines)<=2:
-                nrLine = 3
-                nrNewLine = nrLine-len(PolynomLines)
-                for key in range(len(PolynomLines)-1,-1,-1):
-                    PolynomLines[key+nrNewLine] = PolynomLines[key]
-                
-                for index in range(0, nrNewLine):
-                    PolynomLines[index] = postprocess.PolynomLine(polyDeg)
-            # print (PolynomLines)
 
 
             

@@ -253,9 +253,10 @@ class HistogramProcess:
         windowscenter=[]
 
         #Calculating histogram
-        histogram=np.sum(part,axis=0)/255
-
+        part1 = np.array(part,dtype=np.float)
+        histogram = cv2.reduce(part1,0,rtype = cv2.REDUCE_SUM)[0,:]/255.0
         #Filter the histogram
+        
         histogram_f=np.convolve(histogram,self.kernel,'same')
         # histogram_f = histogram
 
@@ -270,7 +271,6 @@ class HistogramProcess:
                     startPx = i
                 accumulate += histogram_f[i]
                 # accumulatePos += histogram_f[i]*i
-                
             # The end of a non-zero block
             elif histogram_f[i]==0 and histogram_f[i-1]>0:
                 
@@ -317,7 +317,7 @@ class NonSlidingWindowMethodWithPolynom:
         
         self.distanceLimit = distanceLimit
         self.supLimitNrNonZero = np.max(windowSize) * lineThinknessPx * 1.6
-        self.infLimitNrNonZero = np.min(windowSize) * lineThinknessPx * 0.6
+        self.infLimitNrNonZero = np.min(windowSize) * lineThinknessPx * 0.8
 
     def windowCutting(im,pos,windowSize):
         img_size=(im.shape[1],im.shape[0])

@@ -202,7 +202,12 @@ def LineOrderCheck(polynomLine_dic,imagesize):
 
 
 
+
+
 class PolynomLine:
+    
+    limit_K = np.sqrt(2)/500*4
+    
     def __init__(self,polyDeg):
         self.polyDeg = polyDeg
         self.polynom = None
@@ -225,11 +230,11 @@ class PolynomLine:
         coeff1 = np.polyfit(l_y,l_x,self.polyDeg) 
             # error = abs(self.polynom.coef-coeff1)
             # if (error[0] < 0.001 and error[1] < 5 and error[2]<500):
-        # print('Min-R:',abs(1/(2*coeff1[0])))
-        if (abs(1/(2*coeff1[0])) > 100):
+        # print('Min-R:',abs(coeff1[0]),PolynomLine.limit_K)
+        if (abs(coeff1[0]) < PolynomLine.limit_K):
             coeff = coeff1
         else:
-            print("Fucked")
+            print("To big curvature.")
             return
             # else:
             #     print ("error:",error)
@@ -315,15 +320,8 @@ class LaneMiddleGenerator:
                     newline.append((int(pointX),int(pointY)))
 
             middleLine .line = newline   
-                
-            #     # if (len(pointX_l) > 0):
-            #     #     pointX = np.mean(pointX_l)
-            #     #     pointY = np.mean(pointY_l)
-            #     #     line.append ((int(pointX),int(pointY))) 
-            
             return middleLine
         else:
-            # print(len(polynomlines))
             return None
 
 
@@ -347,21 +345,19 @@ class LineEstimatorBasedPolynom:
 
         if maxLen is None :
             print("It wasn't detect any line")
-            return [],polynomlines
+            return polynomlines
         # print(nonLineKey,maxKey)
 
         largestLine = polynomlines[maxKey].line
         for key in nonLineKey:
             keyDiff = key - maxKey
-            line,polynomlines = self.generatePoint(polynomlines,largestLine,key,keyDiff)
-            lines.append(line)
-        return lines,polynomlines
+            polynomlines = self.generatePoint(polynomlines,largestLine,key,keyDiff)
+            # lines.append(line)
+        return polynomlines
 
     def generatePoint(self,polynomlines,largestLine,key,keyDiff):
         line = []
 
-        # distanceBetweenLine = np.abs(keyDiff) * self.laneWidthPx
-        # print('KeyDiff:',keyDiff)
         for index in range(len(largestLine)-1):
             pointI = largestLine[index]
             pointI1 = largestLine[index-1]
@@ -378,10 +374,11 @@ class LineEstimatorBasedPolynom:
             
             newPointX = pointI1[0] - dY * rate
             newPointY = pointI1[1] + dX * rate
-            line.append((int(newPointX),int(newPointY)))
-        line = sorted(line,key=operator.itemgetter(1))
+            if(self.windowSize[0]>= newPointX and newPointX>=0 and self.windowSize[1]>=newPointY and newPointY>0):
+                line.append((int(newPointX),int(newPointY)))
+        # line = sorted(line,key=operator.itemgetter(1))
         polynomlines[key].line = line
-        return line,polynomlines
+        return polynomlines
 
 
 

@@ -13,7 +13,7 @@ def main():
     inputFolder= os.path.realpath('../../resource/videos')
     # source file
     
-    # inputFileName='/newRecord/move4.h264'
+    # inputFileName='/record20Feb/test6_7.h264'
     inputFileName='/martie2/test12.h264'
 
     # inputFileName='/record19Feb2/test50L_1.h264'
@@ -35,10 +35,15 @@ def main():
         for key in laneDetec.PolynomLines.keys():
             drawFunction.drawLine(birdview_mask,laneDetec.PolynomLines[key].line)
             drawFunction.drawWindows(birdview_mask,laneDetec.PolynomLines[key].line,laneDetec.windowSize_nonsliding)    
+        
+        if laneDetec.middleline is not None:
+                drawFunction.drawLine(birdview_mask,laneDetec.middleline.line)
+    
+
         birdview_mask=cv2.resize(birdview_mask,(birdview_mask.shape[1]+birdview_mask.shape[1],birdview_mask.shape[0]+birdview_mask.shape[0]))
 
         cv2.imshow('',birdview_mask)
-        if cv2.waitKey(33) & 0xFF == ord('q'):
+        if cv2.waitKey() & 0xFF == ord('q'):
             break
 
         # index+=1

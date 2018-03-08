@@ -279,8 +279,8 @@ class LaneMiddleGenerator:
         if(len(polynomlines)>=2):
 
             middleLineKey = 1.5
-            limitMinY = None
-            limitMaxY = None
+            limitMinY = self.windowSize[1]
+            limitMaxY = 0
             for key in polynomlines.keys():
                 if key == 0:
                     continue

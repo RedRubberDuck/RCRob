@@ -15,21 +15,23 @@ def main():
     
     # inputFileName='/record20Feb/test6_7.h264'
     inputFileName='/martie2/test12.h264'
+    # inputFileName='/martie8/test1_highResfps10_1.h264'
 
     # inputFileName='/record19Feb2/test50L_1.h264'
     # inputFileName='/record19Feb/test50_8.h264'
     # inputFileName='/f_big_50_4.h264'
     print('Processing:',inputFolder+inputFileName)
     # Video frame reader object
-    videoReader = videoProc.VideoReader(inputFolder+inputFileName)
+    videoReader = videoProc.VideoReaderWithResize(inputFolder+inputFileName,2)
     frameRate = 30.0 
     frameDuration = int(1.0/frameRate*1000)
     
 
     laneDetec = LaneDetection.LaneDetector()
 
-    for frame in videoReader.generateFrame():
+    for frame in videoReader.readFrame():
         birdview_mask = laneDetec.frameProcess(frame)
+        birdview_mask = 255*birdview_mask
         
          
         for key in laneDetec.PolynomLines.keys():

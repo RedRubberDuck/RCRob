@@ -20,20 +20,22 @@ def main():
     # inputFileName='/f_big_50_4.h264'
     print('Processing:',inputFolder+inputFileName)
     # Video frame reader object
-    videoReader = videoProc.VideoReaderWithResize(inputFolder+inputFileName,2)
+    videoReader = videoProc.VideoReader(inputFolder+inputFileName)
     frameRate = 30.0 
     frameDuration = int(1.0/frameRate*1000)
     
+    newSize = (1640//2,1232//2)    
+    videoOutput = cv2.VideoWriter("v1.h264",cv2.VideoWriter_fourcc('H','2','6','4'),10,newSize)
+
 
    
-    for frame in videoReader.readFrame():
-       
-        cv2.imshow('',frame)
-        if cv2.waitKey() & 0xFF == ord('q'):
-            break
+    for frame in videoReader.generateFrame():
+        resizedFrame = cv2.resize(frame,newSize)
+        videoOutput.write(resizedFrame)
+        
 
-        # index+=1
-    end=time.time()
+    videoOutput.release()
+    cv2.destroyAllWindows()  
 
     
 

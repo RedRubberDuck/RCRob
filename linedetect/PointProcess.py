@@ -1,5 +1,6 @@
 import numpy as np
 import cv2
+
 class PointsConnectivity:
     def __init__(self,windowSize):
         self.windowSize = windowSize

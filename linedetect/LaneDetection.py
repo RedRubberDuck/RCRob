@@ -1,12 +1,12 @@
 import cv2
 
 
-import frameProcessor, videoProc, drawFunction,postprocess, ImageTransformation
+import frameProcessor, videoProc, drawFunction,postprocess, ImageTransformation, SlicingMethod
 
 class LaneDetector:
 
     def __init__(self):
-        persTransformation,pxpcm = ImageTransformation.ImagePerspectiveTransformation.getPerspectiveTransformation2()
+        persTransformation,pxpcm = ImageTransformation.ImagePerspectiveTransformation.getPerspectiveTransformation3()
         self.pxpcm = pxpcm
         self.persTransformation = persTransformation
         self.birdviewImage_size = persTransformation.size
@@ -16,7 +16,7 @@ class LaneDetector:
         self.nrSlices = 15
         self.polyDeg = 2
         windowSize=(int(self.birdviewImage_size[1]*2/self.nrSlices),int(self.birdviewImage_size[0]/self.nrSlices))
-        self.slidingMethod = frameProcessor.SlidingWindowMethod(nrSlice = self.nrSlices, frameSize = self.birdviewImage_size, windowSize = windowSize)
+        self.slidingMethod = SlicingMethod.SlicingWindowMethod(nrSlice = self.nrSlices, frameSize = self.birdviewImage_size, windowSize = windowSize)
         self.windowSize_nonsliding = (int(self.birdviewImage_size[1]*2.5/self.nrSlices),int(self.birdviewImage_size[0]*2.5/self.nrSlices))
         self.nonslidingMethod = frameProcessor.NonSlidingWindowMethodWithPolynom(self.windowSize_nonsliding,int(self.birdviewImage_size[0]*0.9/self.nrSlices),2*pxpcm)
         self.lineVer = postprocess.LaneVerifierBasedDistance(35,pxpcm)

@@ -24,7 +24,7 @@ def main():
 
     print('Processing:',inputFolder+inputFileName)
     # Video frame reader object
-    videoReader = videoProc.VideoReader(inputFolder+inputFileName)
+    videoReader = videoProc.VideoReaderWithResize(inputFolder+inputFileName,2)
     frameRate = 30.0 
     frameDuration = 1.0/frameRate
 
@@ -33,7 +33,7 @@ def main():
 
     laneDetec = LaneDetection.LaneDetector()
 
-    for frame in videoReader.generateFrame():
+    for frame in videoReader.readFrame():
         laneDetec.frameProcess(frame)
         
 

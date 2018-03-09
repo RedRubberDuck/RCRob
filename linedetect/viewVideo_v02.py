@@ -22,12 +22,13 @@ def main():
     # inputFileName='/f_big_50_4.h264'
     print('Processing:',inputFolder+inputFileName)
     # Video frame reader object
-    videoReader = videoProc.VideoReaderWithResize(inputFolder+inputFileName,2)
+    rate = 2
+    videoReader = videoProc.VideoReaderWithResize(inputFolder+inputFileName,rate)
     frameRate = 30.0 
     frameDuration = int(1.0/frameRate*1000)
     
 
-    laneDetec = LaneDetection.LaneDetector()
+    laneDetec = LaneDetection.LaneDetector(rate)
 
     for frame in videoReader.readFrame():
         birdview_mask = laneDetec.frameProcess(frame)
@@ -35,11 +36,11 @@ def main():
         
          
         for key in laneDetec.PolynomLines.keys():
-            drawFunction.drawLine(birdview_mask,laneDetec.PolynomLines[key].line)
-            drawFunction.drawWindows(birdview_mask,laneDetec.PolynomLines[key].line,laneDetec.windowSize_nonsliding)    
+            drawFunction.drawLineComplexNumber(birdview_mask,laneDetec.PolynomLines[key].line)
+            drawFunction.drawWindowsComplexNumber(birdview_mask,laneDetec.PolynomLines[key].line,laneDetec.windowSize_sliding)    
         
         if laneDetec.middleline is not None:
-                drawFunction.drawLine(birdview_mask,laneDetec.middleline.line)
+                drawFunction.drawLineComplexNumber(birdview_mask,laneDetec.middleline.line)
     
 
         birdview_mask=cv2.resize(birdview_mask,(birdview_mask.shape[1]+birdview_mask.shape[1],birdview_mask.shape[0]+birdview_mask.shape[0]))

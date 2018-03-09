@@ -218,9 +218,10 @@ class PolynomLine:
         if len(line) <= self.polyDeg:
             print("Warming: Not enough to estimate the polynom")
             return
-        l_point_a = np.array(line)
-        l_y = l_point_a[:,1]
-        l_x = l_point_a[:,0]
+        # l_point_a = np.array(line)
+        l_y = np.imag(line)
+        l_x = np.real(line)
+        # print(line,l_y,l_x)
 
         
 
@@ -245,7 +246,7 @@ class PolynomLine:
         self.polynom = np.poly1d(coeff)
         self.dPolynom = self.polynom.deriv()
         self.line = line
-        self.lineInterval = [np.min(l_point_a[:,1]),np.max(l_point_a[:,1])]
+        self.lineInterval = [np.min(l_y),np.max(l_y)]
 
     def poly(x,*coeff):
         return np.poly1d(coeff)(x)    
@@ -301,7 +302,7 @@ class LaneMiddleGenerator:
                             dX = -1*dX
                             dY = -1*dY
                         if inWindow(pointX+dX,pointY+dY,self.windowSize):
-                            line.append((int(pointX+dX),int(pointY+dY)))
+                            line.append(complex(pointX+dX,pointY+dY))
                 
                 if limitMinY is None or limitMinY > polynomline.lineInterval[0] :
                     limitMinY = polynomline.lineInterval[0]  
@@ -317,7 +318,7 @@ class LaneMiddleGenerator:
                 pointY = self.stepY * index
                 if limitMaxY > pointY and limitMinY < pointY:
                     pointX = middleLine.polynom(pointY)
-                    newline.append((int(pointX),int(pointY)))
+                    newline.append(complex(pointX,pointY))
 
             middleLine .line = newline   
             return middleLine
@@ -362,20 +363,23 @@ class LineEstimatorBasedPolynom:
             pointI = largestLine[index]
             pointI1 = largestLine[index-1]
 
-            dY = pointI1[1] - pointI[1]
-            dX = pointI1[0] - pointI[0]
+            # dY = pointI1[1] - pointI[1]
+            # dX = pointI1[0] - pointI[0]
+            vecI_I1 = pointI1-pointI
             
-            dis = np.sqrt(dY**2 + dX**2)
+            # dis = np.sqrt(dY**2 + dX**2)
+            dis = abs(vecI_I1)
             rate = self.laneWidthPx*abs(keyDiff) / dis
 
-            if( dY*keyDiff > 0 ):
-                dX = -1 * dX
-                dY = -1 * dY
-            
-            newPointX = pointI1[0] - dY * rate
-            newPointY = pointI1[1] + dX * rate
-            if(self.windowSize[0]>= newPointX and newPointX>=0 and self.windowSize[1]>=newPointY and newPointY>0):
-                line.append((int(newPointX),int(newPointY)))
+            if( dis.imag*keyDiff > 0 ):
+                vecI_I1*=-1
+                # dX = -1 * dX
+                # dY = -1 * dY
+            transVec = vecI_I1*complex(0,1)
+            newPoint = pointI1 - transVec * rate
+            # newPointY = pointI1[1] + vecI_I1.real * rate
+            if(self.windowSize[0]>= newPoint.real and newPoint.real>=0 and self.windowSize[1]>=newPoint.imag and newPoint.imag>0):
+                line.append(newPoint)
         # line = sorted(line,key=operator.itemgetter(1))
         polynomlines[key].line = line
         return polynomlines

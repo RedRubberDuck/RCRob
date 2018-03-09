@@ -1,12 +1,12 @@
 import cv2
 
 
-import frameProcessor, videoProc, drawFunction,postprocess, ImageTransformation, SlicingMethod
+import frameProcessor, videoProc, drawFunction,postprocess, ImageTransformation, SlicingMethod, WindowSlidingFnc
 
 class LaneDetector:
 
-    def __init__(self):
-        persTransformation,pxpcm = ImageTransformation.ImagePerspectiveTransformation.getPerspectiveTransformation3()
+    def __init__(self,rate):
+        persTransformation,pxpcm = ImageTransformation.ImagePerspectiveTransformation.getPerspectiveTransformation3(rate)
         self.pxpcm = pxpcm
         self.persTransformation = persTransformation
         self.birdviewImage_size = persTransformation.size
@@ -16,9 +16,9 @@ class LaneDetector:
         self.nrSlices = 15
         self.polyDeg = 2
         windowSize=(int(self.birdviewImage_size[1]*2/self.nrSlices),int(self.birdviewImage_size[0]/self.nrSlices))
-        self.slidingMethod = SlicingMethod.SlicingWindowMethod(nrSlice = self.nrSlices, frameSize = self.birdviewImage_size, windowSize = windowSize)
-        self.windowSize_nonsliding = (int(self.birdviewImage_size[1]*2.5/self.nrSlices),int(self.birdviewImage_size[0]*2.5/self.nrSlices))
-        self.nonslidingMethod = frameProcessor.NonSlidingWindowMethodWithPolynom(self.windowSize_nonsliding,int(self.birdviewImage_size[0]*0.9/self.nrSlices),2*pxpcm)
+        self.slicingImageMethod = SlicingMethod.SlicingWindowMethod(nrSlice = self.nrSlices, frameSize = self.birdviewImage_size, windowSize = windowSize)
+        self.windowSize_sliding = (int(self.birdviewImage_size[1]*2.5/self.nrSlices),int(self.birdviewImage_size[0]*2.5/self.nrSlices))
+        self.slidingWindowMethod = WindowSlidingFnc.SlidingWindowMethodWithPolynom(self.windowSize_sliding,int(self.birdviewImage_size[0]*0.9/self.nrSlices),2*pxpcm)
         self.lineVer = postprocess.LaneVerifierBasedDistance(35,pxpcm)
         self.lineEstimator =  postprocess.LineEstimatorBasedPolynom(45,pxpcm,self.birdviewImage_size)
         self.middleGenerator = postprocess.LaneMiddleGenerator(35,pxpcm,self.birdviewImage_size,self.polyDeg)
@@ -29,7 +29,7 @@ class LaneDetector:
         self.frameNo = -1
 
         
-        self.frameProcessMethod = self.slidingMethodFnc
+        self.frameProcessMethod = self.slicingMethodFnc
     
     def addLinesToPolinom(self,lines):
         for index in range(len(lines)):
@@ -39,19 +39,20 @@ class LaneDetector:
             newPolyLine.line = line
             self.PolynomLines[index]=newPolyLine
 
-    def slidingMethodFnc(self,birdviewGrayFrame):
-        centerAll,lines = self.slidingMethod.apply(birdviewGrayFrame)
+    def slicingMethodFnc(self,birdviewGrayFrame):
+        centerAll,lines = self.slicingImageMethod(birdviewGrayFrame)
+        
         # lines = self.lineVer.checkLane(lines)
         self.PolynomLines.clear()
         self.addLinesToPolinom(lines)
         self.PolynomLines = postprocess.LineOrderCheck(self.PolynomLines,self.birdviewImage_size)
         self.CompletePolynom(self.PolynomLines)
-        self.frameProcessMethod = self.nonslidingMethodFnc
+        self.frameProcessMethod = self.slidingMethodFnc
 
 
-    def nonslidingMethodFnc(self,birdviewGrayFrame):
+    def slidingMethodFnc(self,birdviewGrayFrame):
         self.PolynomLines = self.lineEstimator.estimateLine(self.PolynomLines)
-        self.nonslidingMethod.nonslidingWindowMethod(birdviewGrayFrame,self.PolynomLines)
+        self.slidingWindowMethod(birdviewGrayFrame,self.PolynomLines)
         self.middleline = self.middleGenerator.generateLine(self.PolynomLines,self.middleline)
 
 

@@ -127,7 +127,7 @@ class SlidingWindowMethodWithPolynom:
         for index in range(nrPoint):
             point = line[index - nrRemovedPoint]
             # Copy the surrounding area of the point
-            window,startX,startY=NonSlidingWindowMethodWithPolynom.windowCutting(mask,point,self.windowSize)
+            window,startX,startY=SlidingWindowMethodWithPolynom.windowCutting(mask,point,self.windowSize)
 
 
             nrNonZero = cv2.countNonZero(window)
@@ -153,7 +153,7 @@ class SlidingWindowMethodWithPolynom:
         # Check the length of the line
 
 
-    def slidingWindowMethod(self,mask,polynomline_dic):
+    def __call__(self,mask,polynomline_dic):
         img_size=(mask.shape[1],mask.shape[0])
         for polynomline_Key in polynomline_dic:
             self.lineProcess(mask,polynomline_dic[polynomline_Key]) 

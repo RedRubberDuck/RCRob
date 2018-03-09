@@ -12,7 +12,7 @@ class SlicingWindowMethod:
         self.histogramProc = HistogramProcessingFnc.HistogramProcessing(0.002777778,0.023570226,lineThinkness =  2*5,xDistanceLimit = windowSize[0]//2,partSize=partSize)
         self.liniarityExaminer = PointProcess.LiniarityExaminer(inferiorCorrLimit = 0.9, lineThinkness = 2*5)
         self.pointConnectivity = PointProcess.PointsConnectivity(windowSize)
-    def apply(self,img_bin):
+    def __call__(self,img_bin):
         img_size=(img_bin.shape[1],img_bin.shape[0])
         pointsAll=[]
         for i in range(self.nrSlice):
@@ -20,7 +20,7 @@ class SlicingWindowMethod:
             yPos=int(img_size[1]*(i+0.5)/self.nrSlice)
             points=self.histogramProc.histogramMethod(part,yPos)
             pointsAll+=points
-        point_np= np.array(pointsAll,dtype=[('x',np.uint16),('y',np.uint16)])
+        # point_np= np.array(pointsAll,dtype=[('x',np.uint16),('y',np.uint16)])
         # windowsCenterAll = self.pointsLineVerifying(img_bin,windowsCenterAll)
         lines = self.pointConnectivity.connectPoint(pointsAll)
         return pointsAll,lines

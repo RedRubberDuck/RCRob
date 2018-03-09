@@ -12,9 +12,12 @@ class PointsConnectivity:
         self.limitLine = np.tan(np.radians(15))
         self.limitDistance = np.sqrt(windowSize[0]**2 + windowSize[1]**2)*3.0
         
-    def pointColliniarity(self,xDistAB,yDistAB,xDistBC,yDistBC):
-        A = yDistBC*xDistAB - xDistBC*yDistAB
-        B = (yDistBC*yDistAB + xDistBC*xDistAB)
+    def pointColliniarity(self,distPrev,dist):
+        # A = yDistBC*xDistAB - xDistBC*yDistAB
+        # B = (yDistBC*yDistAB + xDistBC*xDistAB)
+        temp = distPrev*dist.conjugate()
+        A = temp.imag
+        B = temp.real 
         B1 = B * self.limitLine
         B2 = B * -self.limitLine
         limitLow = np.min([B1,B2])
@@ -34,31 +37,28 @@ class PointsConnectivity:
         minDistancePoint = [None] * nrCenter
         lines2=[]
         for i in range(nrCenter):
-            centerI=windowsCenterAll[i]
+            pointI=windowsCenterAll[i]
             # print(centerI)
             minDistance=None
             minDistanceJ=0
             
             onTheLine = False
 
-            xDistPrev = 0 
-            yDistPrev = 0 
+            distPrev = None
             if (listIdsCenter[i] is not None ):
                 pointPrev = lines2[listIdsCenter[i]][-1]
-                xDistPrev =  pointPrev[0] - centerI[0]
-                yDistPrev =  pointPrev[1] - centerI[1]
+                distPrev = pointPrev - pointI
             
             # Compare with the other points. 
             for j in range(i+1,nrCenter):
-                centerJ=windowsCenterAll[j]
-                xDist=centerI[0]-centerJ[0]
-                yDist=centerI[1]-centerJ[1]
-                if(centerI[1]==centerJ[1]):
+                pointJ=windowsCenterAll[j]
+                dist =  pointI - pointJ
+                if(pointI.imag == pointJ.imag):
                     continue
-                
+
                 # If the vertical and horizontal distance is smaller than the limits, then we search the nearest point. 
-                elif ((abs(xDist)<self.maxXDistanceGen and abs(yDist)<self.maxYDistanceGen and centerI[1]<centerJ[1])) or (listIdsCenter[i] is not None and self.pointColliniarity(xDistPrev,yDistPrev,xDist,yDist)):
-                    distance= np.sqrt((xDist)**2 +(yDist)**2)
+                elif ((abs(dist.real)<self.maxXDistanceGen and abs(dist.imag)<self.maxYDistanceGen and pointI.imag<pointJ.imag)) or (listIdsCenter[i] is not None and self.pointColliniarity(distPrev,dist)):
+                    distance=  abs(dist)
                     if self.limitDistance>distance and (minDistancePoint[j] is None or minDistancePoint[j] > distance ) and (minDistance is None or  minDistance>distance):
                         minDistance=distance
                         minDistanceJ=j
@@ -74,7 +74,7 @@ class PointsConnectivity:
                     listIdsCenter[minDistanceJ]=lineId
                     minDistancePoint[minDistanceJ] = minDistance
                     #Creating the new line, as a point container array 
-                    line=[centerI]
+                    line=[pointI]
                     #Adding to the list of the line 
                     lines2.append(line)
                 # The examined point is a part of the line
@@ -84,7 +84,7 @@ class PointsConnectivity:
                     # Getting the line 
                     line=lines2[lineId]
                     # Adding the new point to the line
-                    line.append(centerI)
+                    line.append(pointI)
                     # Setting the line ID for the new point in the table 
                     listIdsCenter[minDistanceJ]=lineId
                     minDistancePoint[minDistanceJ] = minDistance
@@ -94,7 +94,7 @@ class PointsConnectivity:
                 #Final point of a line
                 lineId=listIdsCenter[i]
                 line=lines2[lineId]
-                line.append(centerI)
+                line.append(pointI)
         return lines2
 
 

@@ -20,7 +20,7 @@ def main():
     # inputFileName='/f_big_50_4.h264'
     print('Processing:',inputFolder+inputFileName)
     # Video frame reader object
-    videoReader = videoProc.VideoReaderWithResize(inputFolder+inputFileName,2)
+    videoReader = videoProc.VideoReaderWithResize(inputFolder+inputFileName,3)
     frameRate = 30.0 
     frameDuration = int(1.0/frameRate*1000)
     

@@ -57,8 +57,20 @@ def drawLine(gray,lines):
     for i in range(0,nrLines-1):
         startpoint=lines[i]
         endPoint=lines[i+1]
+        
         cv2.line(gray,(startpoint[0],startpoint[1]),(endPoint[0],endPoint[1]),thickness=1,color=(125,255,255))
     return gray
+
+def drawLineComplexNumber(gray,lines):
+    nrLines=len(lines)
+    for i in range(0,nrLines-1):
+        startpoint=lines[i]
+        endPoint=lines[i+1]
+        startp = (int(startpoint.real),int(startpoint.imag))
+        endp = (int(endPoint.real),int(endPoint.imag))
+        cv2.line(gray,startp,endp,thickness=1,color=(125,255,255))
+    return gray
+
 
 def drawWindows(gray,windowsCenter,windowSize):
     nrPoint = len(windowsCenter)
@@ -73,5 +85,15 @@ def drawWindows(gray,windowsCenter,windowSize):
 
 
 
+def drawWindowsComplexNumber(gray,windowsCenter,windowSize):
+    nrPoint = len(windowsCenter)
+    # print(len(windowsCenter))
+    for index in range(nrPoint):
+        point = windowsCenter[index]
+        points=np.array([[[point.real-windowSize[0]/2,point.imag-windowSize[1]/2],
+                            [point.real+windowSize[0]/2,point.imag-windowSize[1]/2],
+                            [point.real+windowSize[0]/2,point.imag+windowSize[1]/2],
+                            [point.real-windowSize[0]/2,point.imag+windowSize[1]/2]]],dtype=np.int32)
+        cv2.polylines(gray,points,thickness=1,isClosed=True,color=(255,255,255))
 
 

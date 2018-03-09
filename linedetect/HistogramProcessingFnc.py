@@ -48,13 +48,14 @@ class HistogramProcessing:
                     #Calculating the middlsuperiorLimitSizee of the non-zero block
                     indexP=int((startPx+i)/2)
                     #Verify the distance from the last non-zeros block
-                    if (len(points)>0 and abs(points[-1][0]-indexP)<self.xDistanceLimit):
+                    if (len(points)>0 and abs(points[-1].real-indexP)<self.xDistanceLimit):
                         #If the distance is smaller than the threshold, then combines it.
-                        indexP=int((points[-1][0]+indexP)/2)
+                        points[-1].real=(points[-1].real+indexP)/2
                         points[-1]=(indexP,points[-1][1])
                     else:
                         # Add to the list of the windowsCenters
-                        points.append((indexP,yPos))
+                        point = complex(indexP,yPos)
+                        points.append(point)
                 accumulate=0
                 # accumulatePos=0
         return points

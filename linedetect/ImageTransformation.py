@@ -45,13 +45,13 @@ class ImagePerspectiveTransformation:
                 M = cv2.getPerspectiveTransform(corners_pics,corners_real)
                 M_inv = cv2.getPerspectiveTransform(corners_real,corners_pics)
                 return ImagePerspectiveTransformation(M,M_inv,(int(step*2),int(step*2))),pxpcm
-        def getPerspectiveTransformation3():
+        def getPerspectiveTransformation3(rate):
                 corners_pics = np.float32([
                         [421,214],[1354,188],
-                        [-295,609],[2131,572]])//2
+                        [-295,609],[2131,572]])//rate
                 # corners_pics /= 2
 
-                pxpcm = 4
+                pxpcm = 2
                 step = 45*pxpcm
                 corners_real = np.float32( [
                         [0,0],[2,0],

@@ -51,7 +51,7 @@ class ImagePerspectiveTransformation:
                         [-295,609],[2131,572]])//rate
                 # corners_pics /= 2
 
-                pxpcm = 2
+                pxpcm = 4
                 step = 45*pxpcm
                 corners_real = np.float32( [
                         [0,0],[2,0],

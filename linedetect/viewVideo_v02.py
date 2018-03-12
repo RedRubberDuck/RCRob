@@ -14,7 +14,7 @@ def main():
     # source file
     
     # inputFileName='/record20Feb/test6_7.h264'
-    inputFileName='/martie2/test12.h264'
+    inputFileName='/martie2/test1.h264'
     # inputFileName='/martie8/test1_highResfps10_1.h264'
 
     # inputFileName='/record19Feb2/test50L_1.h264'

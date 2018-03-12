@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+import cmath
 
 
 
@@ -50,8 +51,9 @@ class HistogramProcessing:
                     #Verify the distance from the last non-zeros block
                     if (len(points)>0 and abs(points[-1].real-indexP)<self.xDistanceLimit):
                         #If the distance is smaller than the threshold, then combines it.
-                        points[-1].real=(points[-1].real+indexP)/2
-                        points[-1]=(indexP,points[-1][1])
+                        s=0
+                        real=(points[-1].real+indexP)/2
+                        points[-1]=complex(real,yPos)
                     else:
                         # Add to the list of the windowsCenters
                         point = complex(indexP,yPos)

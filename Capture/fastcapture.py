@@ -1,23 +1,29 @@
-import io,time,threading,picamera,cv2,numpy
+import io
+import time
+import threading
+import picamera
+import cv2
+import numpy
 
 # Create a pool of image processors
 done = False
 lock = threading.Lock()
 pool = []
 
+
 class ImageProcessor(threading.Thread):
-    def __init__(self,addToPoolFunc,processFnc):
+    def __init__(self, addToPoolFunc, processFnc):
         super(ImageProcessor, self).__init__()
-        self.name="ImageProcessor"
+        self.name = "ImageProcessor"
         self.stream = io.BytesIO()
         self.event = threading.Event()
         self.terminated = False
-        self.addToPoolFunc=addToPoolFunc
-        self.processFnc=processFnc
+        self.addToPoolFunc = addToPoolFunc
+        self.processFnc = processFnc
         self.start()
 
     def stop(self):
-        self.terminated=True
+        self.terminated = True
 
     def run(self):
         # This method runs in a separate thread
@@ -27,16 +33,17 @@ class ImageProcessor(threading.Thread):
             if self.event.wait(0.1):
                 try:
                     self.stream.seek(0)
-                    buff=numpy.fromstring(self.stream.getvalue(),dtype=numpy.uint8)
-                    frame=cv2.imdecode(buff,1)
+                    buff = numpy.fromstring(
+                        self.stream.getvalue(), dtype=numpy.uint8)
+                    frame = cv2.imdecode(buff, 1)
                     self.processFnc(frame)
                     # Read the image and do some processing on it
-                    #Image.open(self.stream)
+                    # Image.open(self.stream)
                     #...
                     #...
                     # Set done to True if you want the script to terminate
                     # at some point
-                    #done=True
+                    # done=True
                 finally:
                     # Reset the stream and event
                     self.stream.seek(0)
@@ -47,75 +54,75 @@ class ImageProcessor(threading.Thread):
                         self.addToPoolFunc(self)
 
 
-
 class ImageProcessorManager:
-    ##Contructor
+    # Constructor
     #  @param  nrImageProcessor             The number of ImageProcessor objects
-    def __init__(self,nrImageProcessor,processFnc):
-        self.name="ImageProcessorManager"
-        self.pool=[ImageProcessor(self.addToPool,processFnc) for i in range(nrImageProcessor)]
-        self.poolLock=threading.Lock()
-        self.isRunning=True
-    
-    def addToPool(self,obj):
+    def __init__(self, nrImageProcessor, processFnc):
+        self.name = "ImageProcessorManager"
+        self.pool = [ImageProcessor(self.addToPool, processFnc)
+                     for i in range(nrImageProcessor)]
+        self.poolLock = threading.Lock()
+        self.isRunning = True
+
+    def addToPool(self, obj):
         with self.poolLock:
             self.pool.append(obj)
-    
-    ## Start the thread running 
+
+    # Start the thread running
     def start(self):
         if not self.isRunning:
-            self.isRunning=True
+            self.isRunning = True
             # super(ImageProcessorManager,self).start()
-    ## Stop the thread running 
+    # Stop the thread running
+
     def stop(self):
-        self.isRunning=False
-    
+        self.isRunning = False
+
     def stopAllImageProcessor(self):
-        threads=threading.enumerate()
+        threads = threading.enumerate()
         for activeThread in threads:
-            if activeThread.getName()=="ImageProcessor":
+            if activeThread.getName() == "ImageProcessor":
                 activeThread.stop()
                 activeThread.join()
 
-
-    ## Run function
+    # Run function
     def run(self):
-        startTime=time.time()
+        startTime = time.time()
         while(self.isRunning):
             # Block the pool accessing
             with self.poolLock:
-                if len(self.pool)!=0:
+                if len(self.pool) != 0:
                     processor = self.pool.pop()
                 else:
                     processor = None
-            
+
             if processor:
                 yield processor.stream
                 processor.event.set()
-                endtime=time.time()
-                print("Duration:",(endtime-startTime))
-                startTime=endtime
+                endtime = time.time()
+                print("Duration:", (endtime-startTime))
+                startTime = endtime
             else:
                 # When the pool is starved, wait a while for it to refill
-                time.sleep(0.1)   
+                time.sleep(0.1)
 
 
 class ImageSaver:
     def __init__(self):
-        self.index=0
-        self.lock=threading.Lock()
-    
-    def save(self,frame):
+        self.index = 0
+        self.lock = threading.Lock()
+
+    def save(self, frame):
         with self.lock:
-            index=self.index
-            self.index+=1
-        cv2.imwrite("img"+str(index)+".jpg",frame)
+            index = self.index
+            self.index += 1
+        cv2.imwrite("img"+str(index)+".jpg", frame)
         print("Saved img"+str(index)+".jpg")
 
 
 def main():
-    imageSaver=ImageSaver()
-    manager=ImageProcessorManager(30,imageSaver.save)
+    imageSaver = ImageSaver()
+    manager = ImageProcessorManager(30, imageSaver.save)
     with picamera.PiCamera() as camera:
         camera.resolution = (1648, 1232)
         camera.framerate = 30
@@ -131,6 +138,5 @@ def main():
             manager.stopAllImageProcessor()
 
 
-
-if __name__=='__main__':
+if __name__ == '__main__':
     main()

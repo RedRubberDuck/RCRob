@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 import PointProcess, HistogramProcessingFnc
+import my as myCpy
 
 class SlicingWindowMethod:
     def __init__(self,nrSlice,frameSize,windowSize):
@@ -9,7 +10,8 @@ class SlicingWindowMethod:
 
         partSize = (frameSize[0], frameSize[1]//nrSlice)
         print('Window size:',windowSize,'Part size:',partSize)
-        self.histogramProc = HistogramProcessingFnc.HistogramProcessing(0.002777778,0.023570226,lineThinkness =  2*5,xDistanceLimit = windowSize[0]//2,partSize=partSize)
+        # self.histogramProcl1 = HistogramProcessingFnc.HistogramProcessing(0.002777778,0.023570226,lineThinkness =  2*5,xDistanceLimit = windowSize[0]//2,partSize=partSize)
+        self.histogramProc = myCpy.HistogramProcessing(0.009777778,0.023570226,partSize[0],partSize[1],2*5, windowSize[0]//2)
         self.liniarityExaminer = PointProcess.LiniarityExaminer(inferiorCorrLimit = 0.9, lineThinkness = 2*5)
         self.pointConnectivity = PointProcess.PointsConnectivity(windowSize)
     def __call__(self,img_bin):
@@ -18,7 +20,7 @@ class SlicingWindowMethod:
         for i in range(self.nrSlice):
             part=img_bin[int(img_size[1]*i/self.nrSlice):int(img_size[1]*(i+1)/self.nrSlice),:]
             yPos=int(img_size[1]*(i+0.5)/self.nrSlice)
-            points=self.histogramProc.histogramMethod(part,yPos)
+            points=self.histogramProc.apply(part,yPos)
             pointsAll+=points
         # point_np= np.array(pointsAll,dtype=[('x',np.uint16),('y',np.uint16)])
         # windowsCenterAll = self.pointsLineVerifying(img_bin,windowsCenterAll)

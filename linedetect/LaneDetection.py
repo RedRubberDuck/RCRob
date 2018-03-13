@@ -47,7 +47,7 @@ class LaneDetector:
         self.addLinesToPolinom(lines)
         self.PolynomLines = postprocess.LineOrderCheck(self.PolynomLines,self.birdviewImage_size)
         self.CompletePolynom(self.PolynomLines)
-        self.frameProcessMethod = self.slidingMethodFnc
+        # self.frameProcessMethod = self.slidingMethodFnc
 
 
     def slidingMethodFnc(self,birdviewGrayFrame):

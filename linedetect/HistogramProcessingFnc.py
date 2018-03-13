@@ -18,8 +18,12 @@ class HistogramProcessing:
 
         self.inferiorLimitSize = partArea * self.inferiorRate
         self.superiorLimitSize = partArea * self.superiorRate
+        
+        print("W: ",partSize[0],"H: ",partSize[1])
+        print("inf: ",self.inferiorLimitSize,"sup: ",self.superiorLimitSize)
+        print("xDis: ",self.xDistanceLimit,"line ",lineThinkness)
 
-    def histogramMethod(self,part,yPos):
+    def apply(self,part,yPos):
         points=[]
 
         #Calculating histogram
@@ -49,9 +53,11 @@ class HistogramProcessing:
                     #Calculating the middlsuperiorLimitSizee of the non-zero block
                     indexP=int((startPx+i)/2)
                     #Verify the distance from the last non-zeros block
+                    
                     if (len(points)>0 and abs(points[-1].real-indexP)<self.xDistanceLimit):
                         #If the distance is smaller than the threshold, then combines it.
                         s=0
+
                         real=(points[-1].real+indexP)/2
                         points[-1]=complex(real,yPos)
                     else:

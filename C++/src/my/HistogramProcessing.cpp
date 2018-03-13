@@ -57,6 +57,7 @@ my::PointVector_t my::HistogramProcessing::apply(cv::Mat l_img_part,float f_poin
                 uint l_pointX = (l_start_px + col_i )/2;
                 if(l_points.size()>0 && abs(l_points[l_points.size()-1].real() - l_pointX ) < m_xDistanceLimit ){
                     Point_t l_point( (l_points[l_points.size()-1].real() + l_pointX)/2 ,f_pointY);
+                    l_points.pop_back();
                     l_points.push_back(l_point);
                 }else{
                     Point_t l_point(l_pointX,f_pointY);

@@ -3,8 +3,9 @@
 #include <boost/python.hpp>
 #include <boost/python/suite/indexing/vector_indexing_suite.hpp>
 #include <pyboostcvconverter/pyboostcvconverter.hpp>
-#include <my/HistogramProcessing.hpp>
 
+#include <my/HistogramProcessing.hpp>
+#include <my/SlicingImage.hpp>
 
 namespace my {
 
@@ -43,6 +44,11 @@ namespace my {
         class_<my::HistogramProcessing>("HistogramProcessing",init<float,float,uint,uint,uint,float>())
                                 .def("apply",&my::HistogramProcessing::apply)
                                 .def("getKernel",&my::HistogramProcessing::getKernel);
+
+
+        class_<my::SlicingMethod, boost::noncopyable>("SlicingMethod",init<uint,float,float,uint,uint,uint,float>())
+                            .def("apply",&my::SlicingMethod::apply);
+
 
     }
 

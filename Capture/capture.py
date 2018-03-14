@@ -90,7 +90,6 @@ def main():
     with picamera.PiCamera() as camera:
         camera.resolution = (1648, 1232)
         camera.framerate = 30
-        camera.start_preview()
 
         try:
             camera.capture_sequence(manager.run(), use_video_port=True)

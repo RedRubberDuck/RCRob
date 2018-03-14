@@ -12,15 +12,17 @@ pool = []
 
 
 class ImageProcessor(threading.Thread):
-    def __init__(self, addToPoolFunc, processFnc):
+    def __init__(self, addToPoolFunc, frameCollecting, processFnc):
         super(ImageProcessor, self).__init__()
         self.name = "ImageProcessor"
         self.stream = io.BytesIO()
         self.event = threading.Event()
         self.terminated = False
         self.addToPoolFunc = addToPoolFunc
+        self.frameCollecting = frameCollecting
         self.processFnc = processFnc
         self.start()
+        self.frameID = None
 
     def stop(self):
         self.terminated = True
@@ -30,20 +32,15 @@ class ImageProcessor(threading.Thread):
         global done
         while not self.terminated:
             # Wait for an image to be written to the stream
-            if self.event.wait(0.1):
+            if self.event.wait(0.01):
                 try:
                     self.stream.seek(0)
                     buff = numpy.fromstring(
                         self.stream.getvalue(), dtype=numpy.uint8)
                     frame = cv2.imdecode(buff, 1)
                     self.processFnc(frame)
-                    # Read the image and do some processing on it
-                    # Image.open(self.stream)
-                    #...
-                    #...
-                    # Set done to True if you want the script to terminate
-                    # at some point
-                    # done=True
+                    self.frameCollecting(self.frameID, frame)
+
                 finally:
                     # Reset the stream and event
                     self.stream.seek(0)
@@ -59,16 +56,25 @@ class ImageProcessorManager:
     #  @param  nrImageProcessor             The number of ImageProcessor objects
     def __init__(self, nrImageProcessor, processFnc):
         self.name = "ImageProcessorManager"
-        self.pool = [ImageProcessor(self.addToPool, processFnc)
+        self.pool = [ImageProcessor(self.addToPool, self.frameCollecting, processFnc)
                      for i in range(nrImageProcessor)]
         self.poolLock = threading.Lock()
         self.isRunning = True
+        self.frameMap = {}
 
     def addToPool(self, obj):
         with self.poolLock:
             self.pool.append(obj)
 
-    # Start the thread running
+    def frameCollecting(self, index, frame):
+        self.frameMap[index] = frame
+        if len(self.frameMap) > 3:
+            frame = self.frameMap.popitem()
+            print('Deleted', frame[0])
+            if frame[1] is None:
+                print("Process !!!")
+                # Start the thread running
+
     def start(self):
         if not self.isRunning:
             self.isRunning = True
@@ -87,6 +93,7 @@ class ImageProcessorManager:
 
     # Run function
     def run(self):
+        index = 0
         startTime = time.time()
         while(self.isRunning):
             # Block the pool accessing
@@ -94,17 +101,23 @@ class ImageProcessorManager:
                 if len(self.pool) != 0:
                     processor = self.pool.pop()
                 else:
+
                     processor = None
 
             if processor:
                 yield processor.stream
+                processor.frameID = index
+                self.frameMap[index] = None
                 processor.event.set()
                 endtime = time.time()
                 print("Duration:", (endtime-startTime))
+                index += 1
+                if index > 10:
+                    break
                 startTime = endtime
             else:
                 # When the pool is starved, wait a while for it to refill
-                time.sleep(0.1)
+                time.sleep(0.001)
 
 
 class ImageSaver:
@@ -125,11 +138,12 @@ def main():
     manager = ImageProcessorManager(30, imageSaver.save)
     with picamera.PiCamera() as camera:
         camera.resolution = (1648, 1232)
-        camera.framerate = 30
+        camera.framerate = 10
         camera.start_preview()
 
         try:
-            camera.capture_sequence(manager.run(), use_video_port=True)
+            camera.capture_sequence(
+                manager.run(), format='bgr', use_video_port=True)
         except KeyboardInterrupt:
             print("KeyboardInterrupt_Exit")
             pass

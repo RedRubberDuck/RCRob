@@ -9,7 +9,7 @@
 #include <boost/thread.hpp>
 #include <boost/lockfree/queue.hpp>
 
-#define NR_WORKERS 10
+#define NR_WORKERS 2
 
 
 namespace my{
@@ -21,6 +21,7 @@ namespace my{
             Worker(FrameQueue&,boost::mutex&,float,float,uint,uint,uint,float);
 
             void run();
+            PointVector_t getPoints();
         private:
             FrameQueue&                 m_frameBuffer;
             boost::mutex&               m_mtx;
@@ -36,7 +37,7 @@ namespace my{
             SlicingMethod(uint,float,float,uint,uint,uint,float);
             ~SlicingMethod();
 
-            void apply(cv::Mat);
+            PointVector_t apply(cv::Mat);
 
         private:
             const uint                          m_nrSlices;

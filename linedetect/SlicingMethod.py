@@ -12,9 +12,24 @@ class SlicingWindowMethod:
         print('Window size:',windowSize,'Part size:',partSize)
         # self.histogramProcl1 = HistogramProcessingFnc.HistogramProcessing(0.002777778,0.023570226,lineThinkness =  2*5,xDistanceLimit = windowSize[0]//2,partSize=partSize)
         self.histogramProc = myCpy.HistogramProcessing(0.009777778,0.023570226,partSize[0],partSize[1],2*5, windowSize[0]//2)
+        # 20,0.002777778,0.023570226,partSize[0],partSize[1],2*5,partSize[1]//2
+        self.slicingMethod = myCpy.SlicingMethod(nrSlice,0.002777778,0.023570226,partSize[0],partSize[1],2*5,partSize[1]//2)
         self.liniarityExaminer = PointProcess.LiniarityExaminer(inferiorCorrLimit = 0.9, lineThinkness = 2*5)
         self.pointConnectivity = PointProcess.PointsConnectivity(windowSize)
+    
+    
     def __call__(self,img_bin):
+        img_size=(img_bin.shape[1],img_bin.shape[0])
+
+        pointsAll = self.slicingMethod.apply(img_bin)
+        pointsAll = sorted(pointsAll,key =  lambda point: point.imag)
+        pointsAll = np.array(pointsAll)
+        
+        lines = self.pointConnectivity.connectPoint(pointsAll)
+        return pointsAll,lines
+
+
+    def __call1__(self,img_bin):
         img_size=(img_bin.shape[1],img_bin.shape[0])
         pointsAll=[]
         for i in range(self.nrSlice):

@@ -23,23 +23,21 @@ def main():
     inputFileName='/martie2/test12.h264'
 
     print('Processing:',inputFolder+inputFileName)
+    rate = 2
     # Video frame reader object
-    videoReader = videoProc.VideoReaderWithResize(inputFolder+inputFileName,2)
+    videoReader = videoProc.VideoReaderWithResize(inputFolder+inputFileName,rate)
     frameRate = 30.0 
     frameDuration = 1.0/frameRate
 
     # with PyCallGraph(output=graphviz):
     start = time.time()
 
-    laneDetec = LaneDetection.LaneDetector()
+    laneDetec = LaneDetection.LaneDetector(rate)
 
     for frame in videoReader.readFrame():
         laneDetec.frameProcess(frame)
         
 
-
-    end = time.time()
-    print('Runtime:',end-start)
 
 
 

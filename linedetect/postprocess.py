@@ -6,7 +6,8 @@ import scipy.optimize
 
 
 def distance(PointI,PointJ):
-    return np.sqrt((PointI[0]-PointJ[0])**2 + (PointI[1]-PointJ[1])**2)
+    return abs(PointI-PointJ)
+    # return np.sqrt((PointI[0]-PointJ[0])**2 + (PointI[1]-PointJ[1])**2)
 
 # def getTheLargestLine(lines):
 #         largestLineIndex = None
@@ -157,7 +158,7 @@ class LaneVerifierBasedDistance:
             return newLines
         else:
             print("Distance based lane grouping failedd!",nrLane)
-        return None 
+        return []
         
 class LineConvter:
     
@@ -313,6 +314,9 @@ class LaneMiddleGenerator:
                 middleLine = PolynomLine(self.polyDeg)
             
             middleLine.estimatePolynom(line)
+            if middleLine.polynom is None:
+                return None
+
             newline = []
             for index in range(self.nrPoint):
                 pointY = self.stepY * index

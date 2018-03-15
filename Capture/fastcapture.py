@@ -5,50 +5,15 @@ import picamera
 import cv2
 import numpy
 
-# Create a pool of image processors
-done = False
-lock = threading.Lock()
-pool = []
+
+import ImageWorker, ImageSave, ImageUtility
 
 
-class ImageProcessor(threading.Thread):
-    def __init__(self, addToPoolFunc, frameCollecting, processFnc):
-        super(ImageProcessor, self).__init__()
-        self.name = "ImageProcessor"
-        self.stream = io.BytesIO()
-        self.event = threading.Event()
-        self.terminated = False
-        self.addToPoolFunc = addToPoolFunc
-        self.frameCollecting = frameCollecting
-        self.processFnc = processFnc
-        self.start()
-        self.frameID = None
 
-    def stop(self):
-        self.terminated = True
+size = (1664,1232)
+rate = 4
+resize = ImageUtility.calcResize(size,rate)
 
-    def run(self):
-        # This method runs in a separate thread
-        global done
-        while not self.terminated:
-            # Wait for an image to be written to the stream
-            if self.event.wait(0.01):
-                try:
-                    self.stream.seek(0)
-                    buff = numpy.fromstring(
-                        self.stream.getvalue(), dtype=numpy.uint8)
-                    frame = cv2.imdecode(buff, 1)
-                    self.processFnc(frame)
-                    self.frameCollecting(self.frameID, frame)
-
-                finally:
-                    # Reset the stream and event
-                    self.stream.seek(0)
-                    self.stream.truncate()
-                    self.event.clear()
-                    # Return ourselves to the pool
-                    if(not self.terminated):
-                        self.addToPoolFunc(self)
 
 
 class ImageProcessorManager:
@@ -56,7 +21,7 @@ class ImageProcessorManager:
     #  @param  nrImageProcessor             The number of ImageProcessor objects
     def __init__(self, nrImageProcessor, processFnc):
         self.name = "ImageProcessorManager"
-        self.pool = [ImageProcessor(self.addToPool, self.frameCollecting, processFnc)
+        self.pool = [ImageWorker.ImageProcessor(self.addToPool, self.frameCollecting, processFnc,resize)
                      for i in range(nrImageProcessor)]
         self.poolLock = threading.Lock()
         self.isRunning = True
@@ -68,7 +33,7 @@ class ImageProcessorManager:
 
     def frameCollecting(self, index, frame):
         self.frameMap[index] = frame
-        if len(self.frameMap) > 3:
+        if len(self.frameMap) > 4:
             frame = self.frameMap.popitem()
             print('Deleted', frame[0])
             if frame[1] is None:
@@ -85,6 +50,7 @@ class ImageProcessorManager:
         self.isRunning = False
 
     def stopAllImageProcessor(self):
+        s = 0 
         threads = threading.enumerate()
         for activeThread in threads:
             if activeThread.getName() == "ImageProcessor":
@@ -108,6 +74,8 @@ class ImageProcessorManager:
                 yield processor.stream
                 processor.frameID = index
                 self.frameMap[index] = None
+                print("Add no.",index)
+                
                 processor.event.set()
                 endtime = time.time()
                 print("Duration:", (endtime-startTime))
@@ -120,30 +88,21 @@ class ImageProcessorManager:
                 time.sleep(0.001)
 
 
-class ImageSaver:
-    def __init__(self):
-        self.index = 0
-        self.lock = threading.Lock()
-
-    def save(self, frame):
-        with self.lock:
-            index = self.index
-            self.index += 1
-        cv2.imwrite("img"+str(index)+".jpg", frame)
-        print("Saved img"+str(index)+".jpg")
 
 
 def main():
-    imageSaver = ImageSaver()
-    manager = ImageProcessorManager(30, imageSaver.save)
+    imageSaver = ImageSave.ImageSaver()
+    manager = ImageProcessorManager(4, imageSaver.save)
     with picamera.PiCamera() as camera:
-        camera.resolution = (1648, 1232)
-        camera.framerate = 10
+        camera.resolution = size
+        camera.framerate = 30
         camera.start_preview()
+
+       
 
         try:
             camera.capture_sequence(
-                manager.run(), format='bgr', use_video_port=True)
+                manager.run(), format='bgra', use_video_port=True ,resize = resize)
         except KeyboardInterrupt:
             print("KeyboardInterrupt_Exit")
             pass

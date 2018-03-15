@@ -5,38 +5,43 @@ import picamera
 import cv2
 import numpy
 
+import ImageUtility
 
 class MyPiCamera(threading.Thread):
     picamera_obj = picamera.PiCamera()
 
     def __init__(self):
-        MyPiCamera.picamera_obj.resolution = (1648, 1232)
-        MyPiCamera.picamera_obj.framerate = 10
+        self.size = (1648, 1232)
+        self.rate = 3
+        self.newsize = ImageUtility.calcResize(self.size,self.rate)
+        MyPiCamera.picamera_obj.resolution = self.size
+        MyPiCamera.picamera_obj.framerate = 15
+        
         self.stream = io.BytesIO()
         self.isActive = False
         self.frame = None
         self.index = 0
+
+        self.eventDic={}
         super(MyPiCamera, self).__init__()
 
     # Read from the stream the frame and flush the stream
     def _readFromStream(self):
-        self.index += 1
-        print("Frame no."+str(self.index))
-        start = time.time()
+        
         self.stream.seek(0)
         buff = numpy.fromstring(
             self.stream.getvalue(), dtype=numpy.uint8)
-        self.frame = cv2.imdecode(buff, 1)
-        end = time.time()
-        print("D", end-start)
+        self.frame =  buff.reshape((self.newsize[1],self.newsize[0],4))
+        self.index += 1
         self.stream.seek(0)
         self.stream.truncate()
+        self.setEvents()
 
     # Run function of the thread, it reads the frame
     def run(self):
         self.index = 0
         MyPiCamera.picamera_obj.capture_sequence(
-            self._open_stream(), use_video_port=True, format='bgr')
+            self._open_stream(), use_video_port=True, format='bgra',resize = self.newsize)
 
     def _open_stream(self):
         while(self.isActive):
@@ -46,7 +51,7 @@ class MyPiCamera(threading.Thread):
 
     # Get last frame
     def getFrame(self):
-        return self.frame
+        return (self.index,self.frame)
 
     # Start the thread
     def start(self):
@@ -57,12 +62,43 @@ class MyPiCamera(threading.Thread):
     def stop(self):
         self.isActive = False
 
+    def setEvents(self):
+        for key, event in self.eventDic.items():
+            event.set()
+
+    def addNewEvent(self,key,event):
+        self.eventDic[key] = event
+
+    
+class Saver(threading.Thread):
+    def __init__(self,getFrameFnc):
+        super(Saver,self).__init__()
+        self.name = 's'
+        self.event = threading.Event()
+        self.isAlive = True
+        self.getFrameFnc = getFrameFnc
+        
+    
+    def run(self):
+        while(self.isAlive):
+            self.event.wait()
+            self.event.clear()
+            index, frame = self.getFrameFnc()
+            print("No.",index)
+            cv2.imwrite("i"+str(index)+".jpg",frame)
+            
+
+
 
 def main():
     print("Camera test")
     myCameraThread = MyPiCamera()
+    saver = Saver(myCameraThread.getFrame)
+    myCameraThread.addNewEvent(1,saver.event)
+    saver.start()
     myCameraThread.start()
     time.sleep(3)
+    saver.isAlive = False
     myCameraThread.stop()
     myCameraThread.join()
 

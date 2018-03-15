@@ -106,23 +106,24 @@ class LiniarityExaminer:
     def examine(self,frame,verticalTest=True,horizontalTest=True):
         try:
             frame_size=(frame.shape[1],frame.shape[0])
-            frame1 = np.array(frame,dtype=np.float)
-            rowSum = cv2.reduce(frame1,0,rtype = cv2.REDUCE_SUM)
-            try:
-                startX = frame_size[0]//2 - rowSum[:frame_size[0]//2][::-1].tolist().index(0)
-            except:
-                startX = 0
-                pass
-            try:
-                endX = frame_size[0]//2 + rowSum[frame_size[0]//2:].tolist().index(0)
-            except:
-                endX = frame_size[0]
-                pass
+            # frame1 = np.array(frame,dtype=np.float)
+            # rowSum = cv2.reduce(frame1,0,rtype = cv2.REDUCE_SUM)
+            # try:
+            #     startX = frame_size[0]//2 - rowSum[:frame_size[0]//2][::-1].tolist().index(0)
+            # except:
+            #     startX = 0
+            #     pass
+            # try:
+            #     endX = frame_size[0]//2 + rowSum[frame_size[0]//2:].tolist().index(0)
+            # except:
+            #     endX = frame_size[0]
+            #     pass
 
             # if startX == endX:
             #     startX = 0
             #     endX = frame_size[0]
-            points = cv2.findNonZero(frame[:,startX:endX]) 
+            # points = cv2.findNonZero(frame[:,startX:endX]) 
+            points = cv2.findNonZero(frame) 
             stdDev = cv2.meanStdDev(points)[1]
             points = np.array(points[:,0,:],dtype=np.float)
             mean = None
@@ -130,10 +131,11 @@ class LiniarityExaminer:
             covM = res2 [0]
             corrCoef = covM[0,1]/covM[0,0]
             
-            point = res2[1][0,0]+startX,res2[1][0,1]
+            # point = res2[1][0,0]+startX,res2[1][0,1]
+            point = res2[1][0,0],res2[1][0,1]
             # Verifying the Pearson correlation coffecients, the vertical line or the horizontal line
             isLinear = (np.abs(corrCoef)>self.inferiorCorrLimit) or (horizontalTest and stdDev[0]<self.lineThinkness*0.341 and stdDev[1]>frame_size[1]*0.22) or  (verticalTest and stdDev[0]>frame_size[0]*0.22 and stdDev[1]<self.lineThinkness*0.341)
-            return isLinear,point
+            return isLinear,point,len(points)
         except Exception as e:
             print("Except",e)
             return False,(0,0)

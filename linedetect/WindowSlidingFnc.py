@@ -5,7 +5,7 @@ import frameFilter, postprocess, PointProcess
 class SlidingWindowMethodWithPolynom:
     def __init__(self,windowSize,distanceLimit,lineThinknessPx):
         self.windowSize = windowSize
-        self.lineEximiner = PointProcess.LiniarityExaminer(inferiorCorrLimit = 0.75 ,lineThinkness = lineThinknessPx)
+        self.lineEximiner = PointProcess.LiniarityExaminer(inferiorCorrLimit = 0.9 ,lineThinkness = lineThinknessPx)
         
         self.distanceLimit = distanceLimit
         self.supLimitNrNonZero = np.max(windowSize) * lineThinknessPx * 1.6
@@ -133,7 +133,7 @@ class SlidingWindowMethodWithPolynom:
             nrNonZero = cv2.countNonZero(window)
             # print(nrNonZero
             if nrNonZero > self.infLimitNrNonZero and nrNonZero < self.supLimitNrNonZero:
-                isLine,pointPlus = self.lineEximiner.examine(window)
+                isLine,pointPlus,nrNonZero = self.lineEximiner.examine(window)
                 if isLine :
                     
                     pointNew=complex(startX+pointPlus[0],startY+pointPlus[1])

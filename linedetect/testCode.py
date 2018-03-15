@@ -12,7 +12,7 @@ frameFilter = frameProcessor.frameFilter.FrameLineSimpleFilter(persTransformatio
 
 # img = cv2.imread('/home/nandi/Workspaces/git/RCRob/C++/img.jpg')
 cap = cv2.VideoCapture()
-cap.open('/home/nandi/Workspaces/git/resource/videos/martie2/test12.h264')
+cap.open('/home/nandi/Workspaces/git/resource/videos/martie2/test11.h264')
 
 
 # for i in range(10): 

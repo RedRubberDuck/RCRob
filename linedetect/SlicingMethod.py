@@ -27,9 +27,8 @@ class SlicingWindowMethod:
 
         pointsAll = self.slicingMethod.apply(img_bin)
         pointsAll = np.array(pointsAll)
-        # pointsAll = self.pointsLineVerifying(img_bin, pointsAll)
+        pointsAll = self.pointsLineVerifying(img_bin, pointsAll)
         pointsAll = sorted(pointsAll, key=lambda point: point.imag)
-
         lines = self.pointConnectivity.connectPoint(pointsAll)
         return pointsAll, lines
 
@@ -37,7 +36,7 @@ class SlicingWindowMethod:
         img_size = (img_bin.shape[1], img_bin.shape[0])
         pointsAll = []
         for i in range(self.nrSlice):
-            part = img_bin[int(img_size[1]*i/self.nrSlice)                           :int(img_size[1]*(i+1)/self.nrSlice), :]
+            part = img_bin[int(img_size[1]*i/self.nrSlice):int(img_size[1]*(i+1)/self.nrSlice), :]
             yPos = int(img_size[1]*(i+0.5)/self.nrSlice)
             points = self.histogramProc.apply(part, yPos)
             pointsAll += points

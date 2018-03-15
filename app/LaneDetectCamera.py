@@ -1,5 +1,13 @@
+import sys
+
+sys.path.append('../Capture')
+sys.path.append('../linedetect')
+sys.path.append('../Control')
+
 import myCamera
 import LaneDetection
+
+
 
 import time
 import cProfile

@@ -11,12 +11,12 @@ import ImageUtility
 class MyPiCamera(threading.Thread):
     picamera_obj = picamera.PiCamera()
 
-    def __init__(self):
+    def __init__(self, rate):
         self.size = (1664, 1232)
-        self.rate = 1
+        self.rate = rate
         self.newsize = ImageUtility.calcResize(self.size, self.rate)
         MyPiCamera.picamera_obj.resolution = self.size
-        MyPiCamera.picamera_obj.framerate = 30
+        MyPiCamera.picamera_obj.framerate = 15
         self.stream = io.BytesIO()
         self.isActive = False
         self.frame = None
@@ -82,7 +82,6 @@ class Saver(threading.Thread):
         start = time.time()
         while(self.isAlive):
             if(self.event.wait(0.01)):
-                self.event.clear()
                 index, frame = self.getFrameFnc()
                 end = time.time()
                 print("No.", index)
@@ -94,7 +93,7 @@ class Saver(threading.Thread):
 
 def main():
     print("Camera test")
-    myCameraThread = MyPiCamera()
+    myCameraThread = MyPiCamera(1)
     saver = Saver(myCameraThread.getFrame)
     myCameraThread.addNewEvent(1, saver.event)
     saver.start()

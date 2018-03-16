@@ -112,16 +112,13 @@ class LaneDetector:
         return self.middleline
 
     def getDistanceFromMiddleLine(self):
-        distance =  45 * self.pxpcm
+        distance = 45 * self.pxpcm
         if (self.middleline is not None and self.middleline.polynom is not None):
-            Xpx = self.middleline.polynom (self.birdviewImage_size[1]-distance)
+            Xpx = self.middleline.polynom(self.birdviewImage_size[1]-distance)
             distanceXpx = Xpx-self.birdviewImage_size[0]/2
             return distanceXpx/self.pxpcm
         return None
 
-
-            
-        
 
 class LaneDetectThread(threading.Thread):
     def __init__(self, frameGetterFunc, rate):
@@ -160,16 +157,19 @@ class LaneDetectThread(threading.Thread):
             if (self.isActive and self.newFrameEvent.wait(0.01)):
                 index, frame = self.frameGetterFunc()
                 print("Image no.:", index)
-                self.lastInamgeNo = index
 
                 self.newFrameEvent.clear()
                 self.lanedetect.frameProcess(frame)
-                # birdviewMask = self.lanedetect.birdviewMask*255
-                # self.draw(birdviewMask)
-                # cv2.imwrite("im"+str(index)+".jpg",
-                #             birdviewMask)
+                if self.lanedetect.getDistanceFromMiddleLine() is not None:
+                    self.lastInamgeNo = index
+                else:
+                    birdviewMask = self.lanedetect.birdviewMask*255
+                    cv2.imwrite("im"+str(index)+".jpg",
+                                birdviewMask)
+
     def getDistanceFromOptimelLine(self):
         distanceX = self.lanedetect.getDistanceFromMiddleLine()
         return distanceX
+
     def getFrameId(self):
         return self.lastInamgeNo

@@ -96,19 +96,19 @@ class ImagePerspectiveTransformation:
 
                 # point_blackTriangle[0,:,0] = point_blackTriangle[0,:,0]/point_blackTriangle[0,:,2]
                 # point_blackTriangle[0,:,1] = point_blackTriangle[0,:,1]/point_blackTriangle[0,:,2]
-                pX1=30
+                pX1=30//rate
                 pY1 = ((pX1 - corners_pics[0,0])/(corners_pics[2,0]-corners_pics[0,0])*(corners_pics[2,1]-corners_pics[0,1]))+corners_pics[0,1]
                 
                 point1=np.array([pX1,pY1,1])
-                point2=np.array([pX1,1232,1])
+                point2=np.array([pX1,1232//rate,1])
 
 
 
-                pX3=1648-30
+                pX3=(1648-30)//rate
                 pY3 = ((pX3 - corners_pics[1,0])/(corners_pics[3,0]-corners_pics[1,0])*(corners_pics[3,1]-corners_pics[1,1]))+corners_pics[1,1]
                 point3=np.array([pX3,pY3-10,1])
                 print(point3)
-                point4=np.array([pX3,1232,1])
+                point4=np.array([pX3,1232//rate,1])
                 
                 points = np.array([point1,point3,point4,point2])
                 points = np.transpose(points)

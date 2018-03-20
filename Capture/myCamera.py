@@ -16,7 +16,7 @@ class MyPiCamera(threading.Thread):
         self.rate = rate
         self.newsize = ImageUtility.calcResize(self.size, self.rate)
         MyPiCamera.picamera_obj.resolution = self.size
-        MyPiCamera.picamera_obj.framerate = 15
+        MyPiCamera.picamera_obj.framerate = 10
         self.stream = io.BytesIO()
         self.isActive = False
         self.frame = None

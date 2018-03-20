@@ -13,18 +13,19 @@
 
 import sys
 import math
-from threading import Thread
+from threading import Thread, Event
 import time
+import numpy as np
 
 
-##  movingStateClass class. 
+# movingStateClass class.
 #
-#  It is used for computing the maneuvers required for moving the car depending on the 
-#      data received from the vision module. We should receive data regarding the distance 
+#  It is used for computing the maneuvers required for moving the car depending on the
+#      data received from the vision module. We should receive data regarding the distance
 #      between the center of the car and the number of the frame. If no new data is received
 #      for a second, then car stops and waits for new data.
 class movingStateClass(Thread):
-    
+
     # Distance between the center of the car and the center of the lane
     distance_to_center = 0
     # Current frame no.
@@ -38,60 +39,72 @@ class movingStateClass(Thread):
     # TODO Establish values for the factors below
     # Factors for getting angle and speed
     factor_angle = 1
-    factor_speed = 1 
+    factor_speed = 1
 
     # perform the first move following the first bezier
-    ev1=threading.Event()
+    ev1 = Event()
 
     # Flag indicating running state
     RUN = True
 
-    ## Constructor.
-	#  @param self           The object pointer.
+    # Constructor.
+    #  @param self           The object pointer.
     #  @param serialHandler  serialHandler object.
     #  @param function       Function for getting distance to center of the lane
     #  @param function_frame Function for getting frame number
-    def __init__(self,serialHandler,function,function_frame):
+    def __init__(self, serialHandler, function, function_frame):
         self.serialHandler = serialHandler
         # Function that gets position from GPS
         self.getterFunction = function
         self.getterFunctionFrame = function_frame
 
         # Add event keys
-        self.serialHandler.readThread.addWaiter("MCTL",self.ev1)
-        self.serialHandler.readThread.addWaiter("BRAK",self.ev1)
+        self.serialHandler.readThread.addWaiter("MCTL", self.ev1)
+        self.serialHandler.readThread.addWaiter("BRAK", self.ev1)
 
         # Activate the PID
         self.activatePID()
+        self.threshold = 3  # cm
 
-        Thread.__init__(self) 
-  
-    ## Function that performs the actual moves. Moving action is continuous and stopped only if
+        Thread.__init__(self)
+
+    # Function that performs the actual moves. Moving action is continuous and stopped only if
     #           data not received for more than one second.
-	#  @param self         The object pointer.
-    #  @details            UNTESTED        
+        #  @param self         The object pointer.
+    #  @details            UNTESTED
     def run(self):
 
         # Perform actions while turn
         while self.RUN:
+
+            self.frame_no = self.getterFunctionFrame()
+            self.distance_to_center = self.getterFunction()
+
             # If current frame differs from the previous and it is not -1
-            if (self.frame_no != self.prev_frame_no) and (self.frame_no != -1):
+            if (self.frame_no != self.prev_frame_no) and (self.frame_no != -1) and self.distance_to_center is not None:
                 # If distance greater than threshold steer right or left
-                if self.distance_to_center > self.threshold :
-                    self.angle = self.factor_angle * self.distance_to_center
-                    self.speed = 7 + self.factor_speed * abs(self.distance_to_center)
+                if abs(self.distance_to_center) > self.threshold:
+                    self.angle = np.rad2deg(
+                        np.arctan(self.distance_to_center/45))
+
+                    # self.angle = self.factor_angle * self.distance_to_center
+                    self.speed = 0
+                    # self.speed = 7 + self.factor_speed * \
+                    #     abs(self.distance_to_center)
                 # If towards lane center, continue straight
                 else:
+                    self.speed = 0
                     self.angle = 0.0
-                    self.speed = 10.0
+                    # self.speed = 10.0
 
                 # Perform moving action
-                self.makeArc(self.serialHandler,self.speed,self.angle,ev1)
+
+                self.makeArc(self.serialHandler, self.speed, self.angle, ev1)
 
             else:
                 # Push brake
-                self.pushBrake(self.serialHandler,angle,ev1)
-            
+                self.pushBrake(self.serialHandler, angle, ev1)
+
             # Update frame number value
             self.prev_frame_no = self.frame_no
 
@@ -99,78 +112,80 @@ class movingStateClass(Thread):
             self.ev1.clear
 
             # Should let the car move a bit backwards. Then get new data.
-            time.sleep(1)
+            # time.sleep(1)
 
-    ## Method for starting server negotiation process.
+    # Method for starting server negotiation process.
     #  @param self          The object pointer.
     def start(self):
         self.RUN = True
-        super(movingStateClass,self).start()
+        super(movingStateClass, self).start()
 
-    ## Method for stopping server negotiation process.
+    # Method for stopping server negotiation process.
     #  @param self          The object pointer.
     def stop(self):
         self.RUN = False
 
-    ## Function that deletes the waiters.
-	#  @param self         The object pointer.
-    def deleteWaiters(self)
-        self.serialHandler.readThread.deleteWaiter("BRAK",self.ev1)
-        self.serialHandler.readThread.deleteWaiter("MCTL",self.ev1)
- 
-    ## Function that gives the command to the motor.
-	#  @param self         The object pointer.
+    # Function that deletes the waiters.
+        #  @param self         The object pointer.
+    def deleteWaiters(self):
+        self.serialHandler.readThread.deleteWaiter("BRAK", self.ev1)
+        self.serialHandler.readThread.deleteWaiter("MCTL", self.ev1)
+
+    # Function that gives the command to the motor.
+        #  @param self         The object pointer.
     #  @param serialHandler Serial communication object.
     #  @param pwm           pwm value (speed).
     #  @param angle         Steering angle.
     #  @param ev1           Threading event.
     #
-    def makeArc(self,serialHandler,pwm,angle,ev1):
-        sent=serialHandler.sendMove(pwm,angle)
-        if sent:
-            print ( " 2 ")
-            ev1.wait()
-            print("Confirmed")
-            ev1.clear()             
-        else:
-            print("Sending problem MCTL")       
-        time.sleep(0.2) 
+    def makeArc(self, serialHandler, pwm, angle, ev1):
+        print("Pwn:", pwm, "Angle", angle)
+        sent = serialHandler.sendMove(pwm, angle)
+        # if sent:
+        #     print ( " 2 ")
+        #     ev1.wait()
+        #     print("Confirmed")
+        #     ev1.clear()
+        # else:
+        #     print("Sending problem MCTL")
+        # time.sleep(0.2)
 
-    ## Function that stops the car.
-	#  @param self         The object pointer.
+    # Function that stops the car.
+        #  @param self         The object pointer.
     #  @param serialHandler Serial communication object.
     #
-    def pushBrake(self,serialHandler,angle,ev1):
+    def pushBrake(self, serialHandler, angle, ev1):
         angle = float(angle)
-        sent=serialHandler.sendBrake(angle)
-        if sent:
-            print ( " 3 ")
-            ev1.wait()
-            print("Confirmed")
-            ev1.clear()               
-        else:
-            print("Sending problem BRAKE")       
-        time.sleep(0.2) 
+        sent = serialHandler.sendBrake(angle)
+        # if sent:
+        #     print(" 3 ")
+        #     ev1.wait()
+        #     print("Confirmed")
+        #     ev1.clear()
+        # else:
+        #     print("Sending problem BRAKE")
+        # time.sleep(0.2)
 
-    ## Function that activates the PID.
-	#  @param self         The object pointer.
+    # Function that activates the PID.
+        #  @param self         The object pointer.
     #
     def activatePID(self):
-        
+
         # Instantiate an event object, which will be unblocked, when the message was sent to Nucleo.
-        pid_activation_event = threading.Event()
-        # Attach the event object to the key words. 
-        # It will unblock the event object, after the response was received with the specified key word. 
-        self.serialHandler.readThread.addWaiter("PIDA",pid_activation_event)
+        pid_activation_event = Event()
+        # Attach the event object to the key words.
+        # It will unblock the event object, after the response was received with the specified key word.
+        self.serialHandler.readThread.addWaiter("PIDA", pid_activation_event)
         # Send activate PID command over serial
         sent = self.serialHandler.sendPidActivation(True)
         # Display debug message depending on operation success.
         if sent:
-            isConfirmed=pid_activation_event.wait(timeout=1)
+            isConfirmed = pid_activation_event.wait(timeout=1.0)
             if(isConfirmed):
                 print("Confirmed the PID activation commmand!")
             else:
                 raise ConnectionError('Response', 'Response was not received!')
             pid_activation_event.clear()
         # Delete the event object attached to the key work.
-        self.serialHandler.readThread.deleteWaiter("PIDA",pid_activation_event)
+        self.serialHandler.readThread.deleteWaiter(
+            "PIDA", pid_activation_event)

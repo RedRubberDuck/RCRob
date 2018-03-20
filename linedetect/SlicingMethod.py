@@ -2,7 +2,8 @@ import cv2
 import numpy as np
 import PointProcess
 import HistogramProcessingFnc
-import my as myCpy
+
+# import my as myCpy
 
 
 class SlicingWindowMethod:
@@ -12,17 +13,18 @@ class SlicingWindowMethod:
 
         partSize = (frameSize[0], frameSize[1]//nrSlice)
         print('Window size:', windowSize, 'Part size:', partSize)
-        # self.histogramProcl1 = HistogramProcessingFnc.HistogramProcessing(0.002777778,0.023570226,lineThinkness =  2*5,xDistanceLimit = windowSize[0]//2,partSize=partSize)
-        self.histogramProc = myCpy.HistogramProcessing(
-            0.009777778, 0.023570226, partSize[0], partSize[1], 2*pxpcm, windowSize[0]//2)
-        # 20,0.002777778,0.023570226,partSize[0],partSize[1],2*5,partSize[1]//2
-        self.slicingMethod = myCpy.SlicingMethod(
-            nrSlice, 0.002777778, 0.023570226, partSize[0], partSize[1], 2*pxpcm, partSize[1]//2)
+        self.histogramProc = HistogramProcessingFnc.HistogramProcessing(
+            0.002777778, 0.043570226, lineThinkness=2*5, xDistanceLimit=windowSize[0]//2, partSize=partSize)
+        # self.histogramProc = myCpy.HistogramProcessing(
+        #     0.009777778, 0.023570226, partSize[0], partSize[1], 2*pxpcm, windowSize[0]//2)
+        # # 20,0.002777778,0.023570226,partSize[0],partSize[1],2*5,partSize[1]//2
+        # self.slicingMethod = myCpy.SlicingMethod(
+        #     nrSlice, 0.002777778, 0.023570226, partSize[0], partSize[1], 2*pxpcm, partSize[1]//2)
         self.liniarityExaminer = PointProcess.LiniarityExaminer(
             inferiorCorrLimit=0.9, lineThinkness=2.2*pxpcm)
         self.pointConnectivity = PointProcess.PointsConnectivity(windowSize)
 
-    def __call__(self, img_bin):
+    def __call1__(self, img_bin):
         img_size = (img_bin.shape[1], img_bin.shape[0])
 
         pointsAll = self.slicingMethod.apply(img_bin)
@@ -32,7 +34,7 @@ class SlicingWindowMethod:
         lines = self.pointConnectivity.connectPoint(pointsAll)
         return pointsAll, lines
 
-    def __call1__(self, img_bin):
+    def __call__(self, img_bin):
         img_size = (img_bin.shape[1], img_bin.shape[0])
         pointsAll = []
         for i in range(self.nrSlice):

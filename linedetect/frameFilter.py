@@ -76,8 +76,9 @@ class FrameLineSimpleFilter:
     
 
 class TriangleMaksDrawer:
-    def __init__(self,polygons):
+    def __init__(self,polygons,persTransformation):
         self.polygons = polygons
+        self.persTransformation = persTransformation
     
     def draw(self,frame):
         for polygon in self.polygons:
@@ -85,11 +86,17 @@ class TriangleMaksDrawer:
         
         return frame
 
-    def cornersMaskPolygons1(newSize):
+    def cornersMaskPolygons1(newSize,persTransformation):
         polygons1 = np.array( [[[newSize[1]//1.5,newSize[0]],[newSize[1],newSize[0]//2.4],[newSize[1],newSize[0]]]] ,dtype=np.int32)
         polygons2 = np.array( [[[newSize[1]//6.225,newSize[0]],[0,newSize[0]//1.942],[0,newSize[0]]]] ,dtype=np.int32)
         polygons = [polygons1,polygons2]
-        return TriangleMaksDrawer(polygons)
+        return TriangleMaksDrawer(polygons,persTransformation)
+    def cornersMaskPolygons2(newSize,point_backTriangle):
+        
+        polygons1 = np.array( [[point_backTriangle[1],point_backTriangle[2],[newSize[1],newSize[0]]]] ,dtype=np.int32)
+        polygons2 = np.array( [[point_backTriangle[0],point_backTriangle[3],[0,newSize[0]]]] ,dtype=np.int32)
+        polygons = [polygons1,polygons2] #,polygons2
+        return TriangleMaksDrawer(polygons,None)
 
 
 

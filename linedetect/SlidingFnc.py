@@ -1,15 +1,15 @@
 import cv2
 import numpy as np
-import frameFilter, postprocess, PointProcess
+import frameFilter, PointProcess
 
 class SlidingWindowMethodWithPolynom:
     def __init__(self,windowSize,distanceLimit,lineThinknessPx):
         self.windowSize = windowSize
-        self.lineEximiner = PointProcess.LiniarityExaminer(inferiorCorrLimit = 0.9 ,lineThinkness = lineThinknessPx)
+        self.lineEximiner = PointProcess.LiniarityExaminer(inferiorCorrLimit = 0.7 ,lineThinkness = lineThinknessPx)
         
         self.distanceLimit = distanceLimit
-        self.supLimitNrNonZero = np.max(windowSize) * lineThinknessPx * 1.6
-        self.infLimitNrNonZero = np.min(windowSize) * lineThinknessPx * 0.8
+        self.supLimitNrNonZero = np.max(windowSize) * lineThinknessPx * 2.5
+        self.infLimitNrNonZero = np.min(windowSize) * lineThinknessPx * 0.3
 
     def windowCutting(im,pos,windowSize):
         img_size=(im.shape[1],im.shape[0])
@@ -46,23 +46,49 @@ class SlidingWindowMethodWithPolynom:
                 line.remove(pointJ)
                 nrRemoved += 1
     
-    def addFrontPoint(self,imageSize,polynomLine,nrNewPoint=3):
+    def addFrontPoint(self,mask,imageSize,polynomLine,nrNewPoint=10):
         frontPoint = polynomLine.line[0]
+        nrGeneratedPoint = 0
         for i in range(nrNewPoint):
             dV = polynomLine.dPolynom(frontPoint.imag)
             dY = self.distanceLimit*1.0  /np.sqrt(dV**2+1)
             newPointY = int(frontPoint.imag-dY)
             newPointX = int(polynomLine.polynom(newPointY))
+
+            print(frontPoint)
+            print(newPointX,newPointY)
             # newPoint = 
 
             if (newPointX > 0 and newPointX < imageSize[0]) and (newPointY > 0 and newPointY < imageSize[1]):
-                # polynomLine.line.insert(0,(newPointX,newPointY))
-                
-                # frontPoint = (newPointX,newPointY)
                 frontPoint = complex(newPointX,newPointY)
-                polynomLine.line.insert(0,frontPoint)
+
+                window,startX,startY=SlidingWindowMethodWithPolynom.windowCutting(mask,frontPoint,self.windowSize)
+                nrNonZero = cv2.countNonZero(window)
+                if nrNonZero > self.infLimitNrNonZero and nrNonZero < self.supLimitNrNonZero:
+                    isLine,pointPlus,nrNonZero = self.lineEximiner.examine(window)
+                    if isLine :
+                        frontPoint = complex(startX+pointPlus[0],startY+pointPlus[1])
+                        polynomLine.line.insert(0,frontPoint)
+                        nrGeneratedPoint+=1
+                    else:
+                        print("Line test ")    
+                        break
+                else:
+                    
+                    print("Size test: ",nrNonZero,self.infLimitNrNonZero,self.supLimitNrNonZero)    
+                    break
             else:
+                print("On the image")
                 break
+       
+
+        if nrGeneratedPoint < nrNewPoint:
+            print("OOOOO",nrGeneratedPoint)
+        return nrGeneratedPoint
+    
+    
+    
+    
     
     def addBackPoint(self,imageSize,polynomLine,nrNewPoint=3):
         backPoint = polynomLine.line[-1]
@@ -104,27 +130,21 @@ class SlidingWindowMethodWithPolynom:
             if nrLineDis>1:
                 nrNewPoint+=(nrLineDis-1)
     
-
-    def checkPoint(self,point,image):
-        window,startX,startY=NonSlidingWindowMethod.windowCutting(image,point,self.windowSize)
-        histWhiteX = np.sum(window,axis=0)/255
-        histWhiteY = np.sum(window,axis=1)/255        
-        
     
     def lineProcess(self,mask,polynomLine):
         line = polynomLine.line
         if len(line) == 0:
             return 
-        
+        nrFrontGeneratedPoint = 0
         if polynomLine.polynom is not None:
-            self.addFrontPoint(mask.shape,polynomLine)
+            nrFrontGeneratedPoint = self.addFrontPoint(mask,mask.shape,polynomLine)
             self.addBackPoint(mask.shape,polynomLine)
             self.addIntermediatPoint(polynomLine)
 
         nrPoint = len(line)
         nrRemovedPoint = 0
         # Check all point 
-        for index in range(nrPoint):
+        for index in range(nrFrontGeneratedPoint,nrPoint):
             point = line[index - nrRemovedPoint]
             # Copy the surrounding area of the point
             window,startX,startY=SlidingWindowMethodWithPolynom.windowCutting(mask,point,self.windowSize)
@@ -145,10 +165,12 @@ class SlidingWindowMethodWithPolynom:
                 # print(nrNonZero, self.infLimitNrNonZero,self.supLimitNrNonZero)
                 nrRemovedPoint+=1
                 line.remove(point)
+        # self.addFrontPoint(mask,mask.shape,polynomLine)
         self.simplifyLine(line)
         if len(line) < 3:
             polynomLine.line = []
             return
+        
         polynomLine.estimatePolynom(line)
         # Check the length of the line
 

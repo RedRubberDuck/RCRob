@@ -1,13 +1,17 @@
 import cv2
 import threading
 
-import frameProcessor
 import videoProc
 import drawFunction
-import postprocess
 import ImageTransformation
 import SlicingMethod
-import WindowSlidingFnc
+from  SlidingFnc import *
+from frameFilter import *
+from LaneVerifierBasedDistance import *
+from LineEstimatorBasedPolynom import *
+from LaneMiddleGenerator import *
+from PolynomLine import *
+from MyUtility import LineOrderCheck
 import cProfile
 import drawFunction
 
@@ -15,15 +19,15 @@ import drawFunction
 class LaneDetector:
 
     def __init__(self, rate):
-        persTransformation, pxpcm = ImageTransformation.ImagePerspectiveTransformation.getPerspectiveTransformation3(
+        persTransformation, pxpcm,point_backTriangle = ImageTransformation.ImagePerspectiveTransformation.getPerspectiveTransformation4(
             rate)
         self.pxpcm = pxpcm
         self.persTransformation = persTransformation
         self.birdviewImage_size = persTransformation.size
-        self.frameFilter = frameProcessor.frameFilter.FrameLineSimpleFilter(
+        self.frameFilter = FrameLineSimpleFilter(
             persTransformation)
-        self.triangleMaskdrawer = frameProcessor.frameFilter.TriangleMaksDrawer.cornersMaskPolygons1(
-            self.birdviewImage_size)
+        self.triangleMaskdrawer = TriangleMaksDrawer.cornersMaskPolygons2(
+            self.birdviewImage_size,point_backTriangle)
 
         self.nrSlices = 15
         self.polyDeg = 2
@@ -33,12 +37,12 @@ class LaneDetector:
             nrSlice=self.nrSlices, frameSize=self.birdviewImage_size, pxpcm=self.pxpcm, windowSize=windowSize)
         self.windowSize_sliding = (int(
             self.birdviewImage_size[1]*2.5/self.nrSlices), int(self.birdviewImage_size[0]*2.5/self.nrSlices))
-        self.slidingWindowMethod = WindowSlidingFnc.SlidingWindowMethodWithPolynom(
-            self.windowSize_sliding, int(self.birdviewImage_size[0]*0.9/self.nrSlices), 2*pxpcm)
-        self.lineVer = postprocess.LaneVerifierBasedDistance(35, pxpcm)
-        self.lineEstimator = postprocess.LineEstimatorBasedPolynom(
+        self.slidingWindowMethod = SlidingWindowMethodWithPolynom(
+            self.windowSize_sliding, int(self.birdviewImage_size[0]*0.5/self.nrSlices), 2*pxpcm)
+        self.lineVer = LaneVerifierBasedDistance(35, pxpcm)
+        self.lineEstimator = LineEstimatorBasedPolynom(
             45, pxpcm, self.birdviewImage_size)
-        self.middleGenerator = postprocess.LaneMiddleGenerator(
+        self.middleGenerator = LaneMiddleGenerator(
             35, pxpcm, self.birdviewImage_size, self.polyDeg)
 
         self.frameNo = -1
@@ -53,7 +57,7 @@ class LaneDetector:
     def addLinesToPolinom(self, lines):
         for index in range(len(lines)):
             line = lines[index]
-            newPolyLine = postprocess.PolynomLine(self.polyDeg)
+            newPolyLine = PolynomLine(self.polyDeg)
             newPolyLine.estimatePolynom(line)
             newPolyLine.line = line
             self.PolynomLines[index] = newPolyLine
@@ -66,7 +70,7 @@ class LaneDetector:
         self.addLinesToPolinom(lines)
         if(len(self.PolynomLines) == 0):
             return
-        self.PolynomLines = postprocess.LineOrderCheck(
+        self.PolynomLines = LineOrderCheck(
             self.PolynomLines, self.birdviewImage_size)
         self.CompletePolynom(self.PolynomLines)
         self.middleline = self.middleGenerator.generateLine(
@@ -81,13 +85,29 @@ class LaneDetector:
             return
         self.middleline = self.middleGenerator.generateLine(
             self.PolynomLines, self.middleline)
+        self.linesOriantation()
+
+    def linesOriantation(self):
+        der = 0
+        nrSection = 0 
+        for key in self.PolynomLines:
+            polyLine = self.PolynomLines[key]
+            if polyLine is not None and polyLine.line is not None:
+                for i in range(1,len(polyLine.line)):
+                    der += polyLine.line[i]-polyLine.line[i-1]
+                    nrSection += 1
+        derMedie = der/nrSection
+        print('frame orinatation',derMedie,np.degrees(np.arctan( derMedie.real/derMedie.imag)))
+
+
 
     def frameProcess(self, frame):
         birdview_gray, birdview_mask = self.frameFilter.apply2(frame)
         self.birdviewMask = birdview_mask
         birdview_mask = self.triangleMaskdrawer.draw(birdview_mask)
+        birdview_gray = self.triangleMaskdrawer.draw(birdview_gray)
         self.frameProcessMethod(birdview_mask)
-        return birdview_mask
+        return birdview_mask,birdview_gray
 
     def CompletePolynom(self, PolynomLines):
         if len(PolynomLines) <= 2:
@@ -97,7 +117,7 @@ class LaneDetector:
                 PolynomLines[key+nrNewLine] = PolynomLines[key]
 
             for index in range(0, nrNewLine):
-                PolynomLines[index] = postprocess.PolynomLine(self.polyDeg)
+                PolynomLines[index] = PolynomLine(self.polyDeg)
 
     def _checkLines(self):
         detectedLines = False

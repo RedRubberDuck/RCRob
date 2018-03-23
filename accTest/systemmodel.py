@@ -1,6 +1,8 @@
 import numpy as np
+import math
 from matplotlib import pyplot as plt
 import testhelp
+import plotHelp
 
 
 # class Vechile:
@@ -41,10 +43,12 @@ class Vechile:
     def f(self, accel_f, alpha):
         v_f = self.v_f + self.timestep*accel_f
         x = self.x + self.timestep * self.v_f * \
-            np.cos(self.gamma) + self.timestep**2 * np.cos(self.gamma) * accel_f/2
+            np.cos(self.gamma) + self.timestep**2 * \
+            np.cos(self.gamma) * accel_f/2
 
         y = self.y + self.timestep * self.v_f * \
-            np.sin(self.gamma) + self.timestep**2 * np.sin(self.gamma) * accel_f/2
+            np.sin(self.gamma) + self.timestep**2 * \
+            np.sin(self.gamma) * accel_f/2
 
         w = np.tan(np.radians(alpha))/self.wheelbase*self.v_f
         gamma = self.gamma + self.w * self.timestep
@@ -79,7 +83,7 @@ class Vechile:
 def testSecvenceGenerate(timestep):
     alpha_a, accel_a, vel_a = testhelp.testSemnalGenerate(timestep)
     alpha_a_err, accel_a_err, vel_a_err = testhelp.generateError(
-        alpha_a, 3, 3, accel_a, 0.0, 0.5, vel_a, 0.01, 0.01)
+        alpha_a, 0, 3, accel_a, 0.0, 0.5, vel_a, 0.01, 0.01)
 
     plt.figure()
     plt.subplot(311)
@@ -91,20 +95,27 @@ def testSecvenceGenerate(timestep):
     plt.subplot(313)
     plt.plot(vel_a)
     plt.plot(vel_a_err)
-    plt.show()
+    # plt.show()s
 
     return alpha_a, alpha_a_err, accel_a, accel_a_err, vel_a, vel_a_err
 
 
+def getStateCovariance():
+    P = np.matrix([[1.0, 0, 0, 0, 0], [0, 0.5, 0, 0, 0], [
+                  0, 0, 0.1, 0, 0], [0, 0, 0, 0.0, 0], [0, 0, 0, 0, 0.0]])
+    return P
+
+
 def main():
     print("Start systemmodel main")
-    timestep = 0.1
+    timestep = 0.5
     car1 = Vechile(26, timestep)
     car1Err = Vechile(26, timestep)
 
     print(car1.F(0, 0))
 
-    alpha_a, alpha_a_err, accel_a, accel_a_err, vel_a, vel_a_err = testSecvenceGenerate(timestep)
+    alpha_a, alpha_a_err, accel_a, accel_a_err, vel_a, vel_a_err = testSecvenceGenerate(
+        timestep)
 
     X_car1 = []
     Y_car1 = []
@@ -113,6 +124,19 @@ def main():
     X_car1Err = []
     Y_car1Err = []
     Gamma_car1Err = []
+    P = getStateCovariance()
+
+    # plt.figure()
+    # ax = plt.subplot(111, aspect='equal')
+    # plotHelp.plotEllipse(
+    #     ax, 0.5, 0.5, [[1, 0.1], [-0.1, 1]], 0.0))
+    #     ax.set_ylim(-2, 2)
+    #     ax.set_xlim(-2, 2)
+    #     plt.plot(0.5, 0.5, '--o')
+    #     plt.show()
+
+    plt.figure()
+    ax = plt.subplot(111)
 
     for accel, alpha, accel_err, alpha_err in zip(accel_a, alpha_a, accel_a_err, alpha_a_err):
 
@@ -124,15 +148,20 @@ def main():
 
         v_f, x, y, w, gamma = car1Err.f(accel_err, alpha_err)
         car1Err.setState(v_f, x, y, w, gamma)
+        F = car1Err.F(accel, alpha)
+        P = F*P*np.transpose(F)
+        e1 = plotHelp.plotEllipse(x, y, P[1:3, 1:3])
+        ax.add_artist(e1)
         X_car1Err.append(x)
         Y_car1Err.append(y)
         Gamma_car1Err.append(gamma)
 
+    # plt.figure()
+    # plt.subplot(111, aspect='equal')
+    plt.plot(X_car1, Y_car1, '--ro')
+    plt.plot(X_car1Err, Y_car1Err, '--go')
     plt.figure()
-    plt.subplot(211)
-    plt.plot(X_car1, Y_car1)
-    plt.plot(X_car1Err, Y_car1Err)
-    plt.subplot(212)
+    plt.subplot(111)
     plt.plot(Gamma_car1)
     plt.plot(Gamma_car1Err)
 

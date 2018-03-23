@@ -4,7 +4,7 @@ import random
 
 
 def testSemnalGenerate(timestep):
-    nrPoint = 100
+    nrPoint = 40
     accelStart = 20
 
     vel = 0
@@ -13,12 +13,13 @@ def testSemnalGenerate(timestep):
     accel_a = []
     vel_a = []
     for i in range(nrPoint):
-        alpha = 20*np.sin(i/nrPoint*4*math.pi)
+        alpha = 0.0
+        # *np.sin(i/nrPoint*0.5*math.pi+math.pi/2)
         alpha_a.append(alpha)
 
-        if i % (nrPoint//2) == 0:
+        if i % (nrPoint) == 0:
             accel_a.append(accelStart)
-            accelStart = -1 * accelStart
+            accelStart = -0.5 * accelStart
         else:
             accel_a.append(0)
         vel_a.append(vel)

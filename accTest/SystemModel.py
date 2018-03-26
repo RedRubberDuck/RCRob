@@ -131,77 +131,97 @@ class Vechile:
         self.timestepPow2 = timestep**2
         self.state = Vechile.State(x, y, gamma)
 
+    # def f(self, f_state, f_input):
+    #     newState = Vechile.State()
+
+    #     newState.vf = f_state.vf + self.timestep*f_input.accel
+    #     newState.x = f_state.x + \
+    #         np.cos(f_state.gamma+f_state.w*self.timestep)*(self.timestep * f_state.vf +
+    #                                                        self.timestepPow2 * f_input.accel/2)
+
+    #     newState.y = f_state.y + \
+    #         np.sin(f_state.gamma+f_state.w*self.timestep)*(self.timestep * f_state.vf +
+    #                                                        self.timestepPow2 * f_input.accel/2)
+
+    #     newState.w = np.tan(np.radians(f_input.alpha)) / \
+    #         self.wheelbase*f_state.vf
+    #     newState.gamma = f_state.gamma + f_state.w * self.timestep
+
+    #     return newState
+
     def f(self, f_state, f_input):
         newState = Vechile.State()
 
         newState.vf = f_state.vf + self.timestep*f_input.accel
         newState.x = f_state.x + \
-            np.cos(f_state.gamma+f_state.w*self.timestep)*(self.timestep * f_state.vf +
-                                                           self.timestepPow2 * f_input.accel/2)
+            np.cos(f_state.gamma)*(self.timestep * f_state.vf +
+                                   self.timestepPow2 * f_input.accel/2)
 
         newState.y = f_state.y + \
-            np.sin(f_state.gamma+f_state.w*self.timestep)*(self.timestep * f_state.vf +
-                                                           self.timestepPow2 * f_input.accel/2)
+            np.sin(f_state.gamma)*(self.timestep * f_state.vf +
+                                   self.timestepPow2 * f_input.accel/2)
 
-        newState.w = np.tan(np.radians(f_input.alpha))/self.wheelbase*f_state.vf
+        newState.w = np.tan(np.radians(f_input.alpha)) / \
+            self.wheelbase*f_state.vf
         newState.gamma = f_state.gamma + f_state.w * self.timestep
 
         return newState
-
-    # def f(self, f_state, f_input):
-    #     newState = Vechile.State()
-    #
-    #     newState.vf = f_state.vf + self.timestep*f_input.accel
-    #     newState.x = f_state.x + \
-    #         np.cos(f_state.gamma)*(self.timestep * f_state.vf +
-    #                                self.timestepPow2 * f_input.accel/2)
-    #
-    #     newState.y = f_state.y + \
-    #         np.sin(f_state.gamma)*(self.timestep * f_state.vf +
-    #                                self.timestepPow2 * f_input.accel/2)
-    #
-    #     newState.w = np.tan(np.radians(f_input.alpha))/self.wheelbase*f_state.vf
-    #     newState.gamma = f_state.gamma + f_state.w * self.timestep
-    #
-    #     return newState
 
     def h(self, f_state):
         output = Vechile.Output(f_state.vf, f_state.w)
         return output
 
-    def F_x(self, f_state, f_input):
-        F_x = np.matrix([[1, 0, 0, 0, 0],
-                         [math.cos(f_state.gamma)*self.timestep, 1, 0, self.timestep*-1*math.sin(f_state.gamma+f_state.w*self.timestep)
-                          * (f_state.vf*self.timestep+self.timestepPow2*f_input.accel/2), -1*math.sin(f_state.gamma+f_state.w*self.timestep)
-                          * (f_state.vf*self.timestep+self.timestepPow2*f_input.accel/2)],
-                         [math.sin(f_state.gamma)*self.timestep, 0, 1, self.timestep*math.cos(f_state.gamma+f_state.w*self.timestep)
-                          * (f_state.vf*self.timestep+self.timestepPow2*f_input.accel/2), math.cos(f_state.gamma+f_state.w*self.timestep)
-                          * (f_state.vf*self.timestep+self.timestepPow2*f_input.accel/2)],
-                         [math.tan(np.radians(f_input.alpha))/self.wheelbase, 0, 0, 0, 0],
-                         [0, 0, 0, self.timestep, 1]])
-        return F_x
-
     # def F_x(self, f_state, f_input):
     #     F_x = np.matrix([[1, 0, 0, 0, 0],
-    #                      [math.cos(f_state.gamma)*self.timestep, 1, 0, 0, -1*math.sin(f_state.gamma)
+    #                      [math.cos(f_state.gamma+f_state.w*self.timestep)*self.timestep, 1, 0, self.timestep*-1*math.sin(f_state.gamma+f_state.w*self.timestep)
+    #                       * (f_state.vf*self.timestep+self.timestepPow2*f_input.accel /
+    #                          2), -1*math.sin(f_state.gamma+f_state.w*self.timestep)
     #                       * (f_state.vf*self.timestep+self.timestepPow2*f_input.accel/2)],
-    #                      [math.sin(f_state.gamma)*self.timestep, 0, 1, 0, math.cos(f_state.gamma)
+    #                      [math.sin(f_state.gamma+f_state.w*self.timestep)*self.timestep, 0, 1, self.timestep*math.cos(f_state.gamma+f_state.w*self.timestep)
+    #                       * (f_state.vf*self.timestep+self.timestepPow2*f_input.accel /
+    #                          2), math.cos(f_state.gamma+f_state.w*self.timestep)
     #                       * (f_state.vf*self.timestep+self.timestepPow2*f_input.accel/2)],
-    #                      [math.tan(np.radians(f_input.alpha))/self.wheelbase, 0, 0, 0, 0],
+    #                      [math.tan(np.radians(f_input.alpha)) /
+    #                       self.wheelbase, 0, 0, 0, 0],
     #                      [0, 0, 0, self.timestep, 1]])
     #     return F_x
+
+    def F_x(self, f_state, f_input):
+        F_x = np.matrix([[1, 0, 0, 0, 0],
+                         # -1*math.sin(f_state.gamma)* (f_state.vf*self.timestep+self.timestepPow2*f_input.accel/2)
+                         [math.cos(f_state.gamma)*self.timestep, 1, 0, 0, 0],
+                         #  math.cos(f_state.gamma)* (f_state.vf*self.timestep+self.timestepPow2*f_input.accel/2)
+                         [math.sin(f_state.gamma)*self.timestep, 0, 1, 0,  0],
+                         [math.tan(np.radians(f_input.alpha)) /
+                          self.wheelbase, 0, 0, 0, 0],
+                         [0, 0, 0, self.timestep, 1]])
+        return F_x
 
     def F_u(self, f_state, f_input):
         s = 0
 
         F_u = np.matrix([[self.timestep, 0.0],
-                         [math.cos(f_state.gamma)/2*self.timestepPow2, 0.0],
-                         [math.sin(f_state.gamma)/2*self.timestepPow2, 0.0],
-                         [0.0, f_state.vf/(math.cos(np.radians(f_input.alpha))
-                                           ** 2*self.wheelbase)*math.pi/360],
+                         [0.0, 0.0],
+                         [0.0, 0.0],
+                         [0.0, 0.0],
                          [0.0, 0.0]])
         return F_u
+
+    # def F_u(self, f_state, f_input):
+    #     s = 0
+
+    #     F_u = np.matrix([[self.timestep, 0.0],
+    #                      [math.cos(f_state.gamma+f_state.w *
+    #                                self.timestep)/2*self.timestepPow2, 0.0],
+    #                      [math.sin(f_state.gamma+f_state.w *
+    #                                self.timestep)/2*self.timestepPow2, 0.0],
+    #                      [0.0, f_state.vf/(math.cos(np.radians(f_input.alpha))
+    #                                        ** 2*self.wheelbase)],
+    #                      [0.0, 0.0]])
+    #     return F_u
 
     def H(self, state):
         H = np.matrix([[1, 0, 0, 0, 0], [0, 0, 0, 1.0, 0]])
         return H
+
+    # Check the function

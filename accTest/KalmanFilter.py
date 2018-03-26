@@ -35,28 +35,35 @@ class KalmanFilter:
         F_x = self.F_x(f_state, f_input)
         F_u = self.F_u(f_state, f_input)
 
-        R = F_u*self.Q*np.transpose(F_u)
+        Q = F_u*self.Q*np.transpose(F_u)
 
-        # print(R)
-        P = F_x*P*np.transpose(F_x) + R
-        # print(P)
+        P = F_x*P*np.transpose(F_x) + Q
 
         return (newState, P)
 
     def update(self, f_state, f_measurment, P):
         output_sys = self.h(f_state)
         mes_res = f_measurment._Y - output_sys._Y
+        print(mes_res)
 
         H = self.H(f_state)
+
         res_cov = H * self.P * np.transpose(H) + self.R
+
         # print(res_cov)
 
         res_cov_inv = np.linalg.inv(res_cov)
         state_size = f_state.X.shape[0]
         K = P * np.transpose(H) * res_cov_inv
-        # print('K', K)
 
-        X = f_state.X + K * mes_res
+        cor = K * mes_res
+        # cor[0, 0] = 0.0
+        # cor[1, 0] = 0.0
+        # cor[2, 0] = 0.0
+        # cor[3, 0] = 0.0
+        # cor[4, 0] = 0.0
+        # print(cor)
+        X = f_state.X+cor
         P = (np.eye(state_size) - K*H)*P
 
         newState = self.StateClass()
@@ -66,7 +73,7 @@ class KalmanFilter:
 
 def getStateCovariance():
     P = np.matrix([[0.0, 0, 0, 0, 0], [0, 5.0, 0, 0, 0], [
-                  0, 0, 5.0, 0, 0], [0, 0, 0, 0.0, 0], [0, 0, 0, 0, math.pi/360]])
+                  0, 0, 5.0, 0, 0], [0, 0, 0, 0.0, 0], [0, 0, 0, 0, math.pi/180]])
     # math.pi/180
     return P
 

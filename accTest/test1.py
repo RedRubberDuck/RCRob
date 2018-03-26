@@ -10,7 +10,7 @@ from KalmanFilter import *
 def testSecvenceGenerate(timestep):
     alpha_a, accel_a = testhelp.generateInputSemnal(timestep)
     alpha_a_err, accel_a_err = testhelp.generateInputError(
-        alpha_a, 0.0, 6.5, accel_a, 0.00, 0.4)
+        alpha_a, 5.0, 0.0, accel_a, 0.00, 0.51)
 
     plt.figure()
     plt.subplot(211)
@@ -68,8 +68,8 @@ def main():
 
     # State covariance
     P = getStateCovariance()
-    Q = getProcessNoise(0.1, timestep, 6.5, 26, 1.0)
-    R = getMeasurmentNoise(velf=0.1, groErr=0.05)
+    Q = getProcessNoise(0.51, timestep, 10.0, 26, 1.0)
+    R = getMeasurmentNoise(velf=0.0001, groErr=0.0001)
     # e1 = plotHelp.plotEllipse(0, 0, P[1:3, 1:3])
     # ax.add_artist(e1)
 
@@ -94,7 +94,8 @@ def main():
         Velf.append(newState.vf)
         W_car1.append(newState.w)
 
-    Vf_err, W_err = testhelp.generateMesError(Velf, 0.0, 0.5, W_car1, 0.00, 0.05)
+    Vf_err, W_err = testhelp.generateMesError(
+        Velf, 0.0, 0.0, W_car1, 0.00, 0.0)
 
     for accel_err, alpha_err, vf_mes, w_mes in zip(accel_a_err, alpha_a_err, Vf_err, W_err):
         l_measurment = Vechile.Output(vf_mes, w_mes)
@@ -108,9 +109,12 @@ def main():
         VelfErr.append(newStateErr.vf)
         W_car1Err.append(newStateErr.w)
 
-        newStateErrF, l_P = l_kalmanFilter.predict(l_kalmanFilter.X, l_input, l_kalmanFilter.P)
+        newStateErrF, l_P = l_kalmanFilter.predict(
+            l_kalmanFilter.X, l_input, l_kalmanFilter.P)
+        # print('Angle', P[3, 3])
 
-        newStateErrF, l_P = l_kalmanFilter.update(newStateErrF, l_measurment, l_P)
+        newStateErrF, l_P = l_kalmanFilter.update(
+            newStateErrF, l_measurment, l_P)
         l_kalmanFilter.X = newStateErrF
         l_kalmanFilter.P = l_P
 

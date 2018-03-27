@@ -44,7 +44,6 @@ class KalmanFilter:
     def update(self, f_state, f_measurment, P):
         output_sys = self.h(f_state)
         mes_res = f_measurment._Y - output_sys._Y
-        print(mes_res)
 
         H = self.H(f_state)
 
@@ -57,12 +56,6 @@ class KalmanFilter:
         K = P * np.transpose(H) * res_cov_inv
 
         cor = K * mes_res
-        # cor[0, 0] = 0.0
-        # cor[1, 0] = 0.0
-        # cor[2, 0] = 0.0
-        # cor[3, 0] = 0.0
-        # cor[4, 0] = 0.0
-        # print(cor)
         X = f_state.X+cor
         P = (np.eye(state_size) - K*H)*P
 
@@ -73,7 +66,7 @@ class KalmanFilter:
 
 def getStateCovariance():
     P = np.matrix([[0.0, 0, 0, 0, 0], [0, 5.0, 0, 0, 0], [
-                  0, 0, 5.0, 0, 0], [0, 0, 0, 0.0, 0], [0, 0, 0, 0, math.pi/180]])
+                  0, 0, 5.0, 0, 0], [0, 0, 0, math.pi/10, 0], [0, 0, 0, 0, math.pi/180]])
     # math.pi/180
     return P
 
@@ -82,12 +75,6 @@ def getProcessNoise(varAcc, timestep, alphaErr, wheelbase, maxVel):
     Q = np.zeros((2, 2))
     Q[0, 0] = varAcc
     Q[1, 1] = alphaErr
-    # Q[2, 2] = varAcc*timestep**2/2
-    # Q[3, 3] = np.tan(np.radians(alphaErr))*maxVel/wheelbase
-    # Q[4, 4] = 0.0
-    # # np.tan(np.radians(alphaErr))*maxVel/wheelbase * timestep
-    # print('SS', np.tan(np.radians(alphaErr))*maxVel/wheelbase,
-    #       np.tan(np.radians(alphaErr))*maxVel/wheelbase * timestep)
     return Q
 
 

@@ -161,8 +161,7 @@ class Vechile:
             np.sin(f_state.gamma)*(self.timestep * f_state.vf +
                                    self.timestepPow2 * f_input.accel/2)
 
-        newState.w = np.tan(np.radians(f_input.alpha)) / \
-            self.wheelbase*f_state.vf
+        newState.w = f_state.vf*np.tan(f_input.alpha) / self.wheelbase
         newState.gamma = f_state.gamma + f_state.w * self.timestep
 
         return newState
@@ -189,11 +188,12 @@ class Vechile:
     def F_x(self, f_state, f_input):
         F_x = np.matrix([[1, 0, 0, 0, 0],
                          # -1*math.sin(f_state.gamma)* (f_state.vf*self.timestep+self.timestepPow2*f_input.accel/2)
-                         [math.cos(f_state.gamma)*self.timestep, 1, 0, 0, 0],
+                         [math.cos(f_state.gamma)*self.timestep, 1, 0, 0, -1*math.sin(f_state.gamma)
+                          * (f_state.vf*self.timestep+self.timestepPow2*f_input.accel/2)],
                          #  math.cos(f_state.gamma)* (f_state.vf*self.timestep+self.timestepPow2*f_input.accel/2)
-                         [math.sin(f_state.gamma)*self.timestep, 0, 1, 0,  0],
-                         [math.tan(np.radians(f_input.alpha)) /
-                          self.wheelbase, 0, 0, 0, 0],
+                         [math.sin(f_state.gamma)*self.timestep, 0, 1, 0, math.cos(f_state.gamma)
+                          * (f_state.vf*self.timestep+self.timestepPow2*f_input.accel/2)],
+                         [math.tan(f_input.alpha)/self.wheelbase, 0, 0, 0, 0],
                          [0, 0, 0, self.timestep, 1]])
         return F_x
 
@@ -201,9 +201,10 @@ class Vechile:
         s = 0
 
         F_u = np.matrix([[self.timestep, 0.0],
-                         [0.0, 0.0],
-                         [0.0, 0.0],
-                         [0.0, 0.0],
+                         [self.timestepPow2*np.cos(f_state.gamma)/2, 0.0],
+                         [self.timestepPow2*np.sin(f_state.gamma)/2, 0.0],
+                         [0.0, f_state.vf/self.wheelbase /
+                             (np.cos(f_input.alpha)**2)],
                          [0.0, 0.0]])
         return F_u
 

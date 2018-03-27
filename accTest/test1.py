@@ -10,7 +10,7 @@ from KalmanFilter import *
 def testSecvenceGenerate(timestep):
     alpha_a, accel_a = testhelp.generateInputSemnal(timestep)
     alpha_a_err, accel_a_err = testhelp.generateInputError(
-        alpha_a, 5.0, 0.0, accel_a, 0.00, 0.51)
+        alpha_a,   math.pi/180*1, 0.0, accel_a, 0.00, 0.0)
 
     plt.figure()
     plt.subplot(211)
@@ -26,7 +26,7 @@ def testSecvenceGenerate(timestep):
 def main():
     print("Start systemmodel main")
 
-    timestep = 0.1
+    timestep = 0.01
     car1 = Vechile(26, timestep, x=0, y=0, gamma=math.pi/4)
     car1Err = Vechile(26, timestep, x=0, y=0, gamma=math.pi/4)
 
@@ -68,8 +68,8 @@ def main():
 
     # State covariance
     P = getStateCovariance()
-    Q = getProcessNoise(0.51, timestep, 10.0, 26, 1.0)
-    R = getMeasurmentNoise(velf=0.0001, groErr=0.0001)
+    Q = getProcessNoise(0.0, timestep,  math.pi/180*5, 26, 1.0)
+    R = getMeasurmentNoise(velf=0.00001, groErr=math.pi/360)
     # e1 = plotHelp.plotEllipse(0, 0, P[1:3, 1:3])
     # ax.add_artist(e1)
 
@@ -95,7 +95,7 @@ def main():
         W_car1.append(newState.w)
 
     Vf_err, W_err = testhelp.generateMesError(
-        Velf, 0.0, 0.0, W_car1, 0.00, 0.0)
+        Velf, 0.0, 0.0, W_car1, 0.00, math.pi/360)
 
     for accel_err, alpha_err, vf_mes, w_mes in zip(accel_a_err, alpha_a_err, Vf_err, W_err):
         l_measurment = Vechile.Output(vf_mes, w_mes)

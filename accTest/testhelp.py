@@ -5,14 +5,14 @@ import random
 
 def generateInputSemnal(timestep):
     nrPoint = 1000
-    accelStart = 600
+    accelStart = 300
 
     vel = 0
 
     alpha_a = []
     accel_a = []
     vel_a = []
-    alpha = 20.0
+    alpha = math.pi/180*20
     accel = 0
     alpha_a.append(alpha)
     accel_a.append(accelStart)
@@ -20,11 +20,11 @@ def generateInputSemnal(timestep):
     for i in range(nrPoint):
         alpha_a.append(alpha)
         accel_a.append(accel)
-        if (i+1) % (nrPoint//2) == 0:
+        if (i+1) % (nrPoint//3) == 0:
             # accel_a.append(0)
-            accel_a[-1] = -4.0*accelStart
+            accel_a[-1] = 4.0*accelStart
 
-            alpha = -5
+            alpha = alpha = math.pi/180*-5
         # else:
         #     accel_a.append(0)
         vel_a.append(vel)

@@ -68,8 +68,8 @@ def main():
 
     # State covariance
     P = getStateCovariance()
-    Q = getProcessNoise(0.0, timestep,  math.pi/180*5, 26, 1.0)
-    R = getMeasurmentNoise(velf=0.00001, groErr=math.pi/360)
+    Q = getProcessNoise(0.0, timestep,  math.pi/180*100, 26, 1.0)
+    R = getMeasurmentNoise(velf=0.00001, groErr=math.pi/360/5)
     # e1 = plotHelp.plotEllipse(0, 0, P[1:3, 1:3])
     # ax.add_artist(e1)
 
@@ -95,7 +95,7 @@ def main():
         W_car1.append(newState.w)
 
     Vf_err, W_err = testhelp.generateMesError(
-        Velf, 0.0, 0.0, W_car1, 0.00, math.pi/360)
+        Velf, 0.0, 0.0, W_car1, 0.00, math.pi/360/5)
 
     for accel_err, alpha_err, vf_mes, w_mes in zip(accel_a_err, alpha_a_err, Vf_err, W_err):
         l_measurment = Vechile.Output(vf_mes, w_mes)

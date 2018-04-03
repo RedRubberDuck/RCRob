@@ -29,7 +29,8 @@ def systemModelTest():
 
     print("F_x", F_x)
     print("F_u", F_u)
-    subs = {x: 0, y: 0, theta: np.radians(0), v: 0.2, alpha: np.radians(20), dt: 0.02, w: 0.26}
+    subs = {x: 0, y: 0, theta: np.radians(
+        0), v: 0.2, alpha: np.radians(20), dt: 0.02, w: 0.26}
 
     States = None
     States_Lin = None
@@ -41,7 +42,8 @@ def systemModelTest():
     subs_[v] = 0.0
     # subs_[alpha] = 0.0
 
-    rob1 = RobotEKF(wheelbase=0.26, dt=0.02, std_v=0.1, std_alpha=np.radians(1))
+    rob1 = RobotEKF(wheelbase=0.26, dt=0.02,
+                    std_v=0.1, std_alpha=np.radians(1))
 
     States_Sim = rob1.x
 
@@ -105,7 +107,11 @@ class RobotEKF(EKF):
     # @param  x             =   the robot initial state
     # @param  u             =   the system model input parameters
     def move(self, x, u):
-        return x + np.matrix([[u[0, 0]*self.__dt*np.cos(x[2, 0])], [u[0, 0]*self.__dt*np.sin(x[2, 0])], [u[0, 0]/self.__w*self.__dt*np.tan(u[1, 0])]])
+        return x + np.matrix([
+            [u[0, 0]*self.__dt*np.cos(x[2, 0])],
+            [u[0, 0]*self.__dt*np.sin(x[2, 0])],
+            [u[0, 0]/self.__w*self.__dt*np.tan(u[1, 0])]
+        ])
 
     # Predict the state of the robot
     # @param  u             =   the input of the system model
@@ -116,10 +122,13 @@ class RobotEKF(EKF):
         F_u = self.F_u(self.x, u)
 
         self.x = newX
-        self.P = np.dot(F_x, self.P).dot(F_x.T) + np.dot(F_u, self.M).dot(F_u.T)
+        self.P = np.dot(F_x, self.P).dot(F_x.T) + \
+            np.dot(F_u, self.M).dot(F_u.T)
 
     def update(self, mes, R):
+        print('X1', self.x)
         super(RobotEKF, self).update(z=mes, HJacobian=self.H_x, Hx=self.h, R=R)
+        print('X2', self.x)
 
     # Jacobian matrix of the transition function
     # @param  x             =   the state of the robot
@@ -138,7 +147,8 @@ class RobotEKF(EKF):
         return np.matrix([
             [self.__dt*np.cos(x[2, 0]), 0.0],
             [self.__dt*np.sin(x[2, 0]), 0.0],
-            [self.__dt*np.tan(u[1, 0])/self.__w, self.__dt*u[0, 0]*(np.tan(u[1, 0])**2+1)/self.__w]
+            [self.__dt*np.tan(u[1, 0])/self.__w, self.__dt *
+             u[0, 0]*(np.tan(u[1, 0])**2+1)/self.__w]
         ])
 
     def h(self, x):

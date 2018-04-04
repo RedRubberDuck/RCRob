@@ -51,12 +51,39 @@ def generateOutput(dataA):
 
 
 def plotting(dataA):
-    s = 0.0
+
+    GyroA = None
+    AccA = None
+    CompassA = None
+    FussionA = None
+    i = 0
+    for dataV in dataA:
+        if i == 0:
+            GyroA = np.matrix([dataV['gyro']])
+            AccA = np.matrix([dataV['accel']])
+            CompassA = np.matrix([dataV['compass']])
+            FussionA = np.matrix([dataV['fusionPose']])
+            # print(GyroA)
+        else:
+            GyroA = np.concatenate((GyroA, np.matrix([dataV['gyro']])), axis=0)
+            AccA = np.concatenate((GyroA, np.matrix([dataV['accel']])), axis=0)
+            CompassA = np.concatenate(
+                (GyroA, np.matrix([dataV['compass']])), axis=0)
+            FussionA = np.concatenate(
+                (GyroA, np.matrix([dataV['fusionPose']])), axis=0)
+        i += 1
+    plt.subplot(311)
+    plt.plot(CompassA[:, 0].T.tolist()[0])
+    plt.subplot(312)
+    plt.plot(CompassA[:, 1].T.tolist()[0])
+    plt.subplot(313)
+    plt.plot(CompassA[:, 2].T.tolist()[0])
+    plt.show()
 
 
 def main():
     data = readFile()
-    # plotting(data)
+    plotting(data)
     inputA = generateInput(20, 0.0)
     mesA, oriantation = generateOutput(data)
 

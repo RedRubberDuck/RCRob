@@ -97,7 +97,7 @@ class RobotEKF(EKF):
     #  @param wheelbase     =   the robot wheelbase
     #  @param dt            =   the timestep of the simulation
     def __init__(self, wheelbase, dt, std_v, std_alpha):
-        super(RobotEKF, self).__init__(3, 2, 3)
+        super(RobotEKF, self).__init__(3, 1, 2)
         self.__w = wheelbase
         self.__dt = dt
 
@@ -152,10 +152,12 @@ class RobotEKF(EKF):
         ])
 
     def h(self, x):
-        return x.copy()
+        return x[2, 0]
+        # return x.copy()
 
     def H_x(self, x):
-        return np.matrix([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
+        return np.matrix([[0, 0, 1]])
+        # return np.matrix([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
 
 
 if __name__ == "__main__":

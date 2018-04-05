@@ -12,7 +12,7 @@ Expedocio
 
 
 def readFile():
-    fileName = '../resource2/dataF20.json'
+    fileName = '../resource2/datKalmanF2.json'
     fileIn = open(fileName, 'r')
     data = json.load(fileIn)
     # print(data)
@@ -66,24 +66,58 @@ def plotting(dataA):
             # print(GyroA)
         else:
             GyroA = np.concatenate((GyroA, np.matrix([dataV['gyro']])), axis=0)
-            AccA = np.concatenate((GyroA, np.matrix([dataV['accel']])), axis=0)
+            AccA = np.concatenate((AccA, np.matrix([dataV['accel']])), axis=0)
             CompassA = np.concatenate(
-                (GyroA, np.matrix([dataV['compass']])), axis=0)
+                (CompassA, np.matrix([dataV['compass']])), axis=0)
             FussionA = np.concatenate(
-                (GyroA, np.matrix([dataV['fusionPose']])), axis=0)
+                (FussionA, np.matrix([dataV['fusionPose']])), axis=0)
         i += 1
+
+    plt.figure()
     plt.subplot(311)
+    plt.title("Accel")
+    plt.plot(AccA[:, 0].T.tolist()[0])
+    plt.subplot(312)
+    plt.plot(AccA[:, 1].T.tolist()[0])
+    plt.subplot(313)
+    plt.plot(AccA[:, 2].T.tolist()[0])
+    plt.figure()
+
+    plt.subplot(311)
+    plt.title("Gyro")
+    plt.plot(GyroA[:, 0].T.tolist()[0])
+    plt.subplot(312)
+    plt.plot(GyroA[:, 1].T.tolist()[0])
+    plt.subplot(313)
+    plt.plot(GyroA[:, 2].T.tolist()[0])
+    plt.figure()
+
+    plt.subplot(311)
+    plt.title("Compass")
     plt.plot(CompassA[:, 0].T.tolist()[0])
     plt.subplot(312)
     plt.plot(CompassA[:, 1].T.tolist()[0])
     plt.subplot(313)
     plt.plot(CompassA[:, 2].T.tolist()[0])
+    plt.figure()
+
+    plt.subplot(311)
+    plt.title("Fussion")
+    plt.plot(np.degrees(FussionA[:, 0].T.tolist()[0]))
+    plt.subplot(312)
+    plt.plot(np.degrees(FussionA[:, 1].T.tolist()[0]))
+    plt.subplot(313)
+    plt.plot(np.degrees(FussionA[:, 2].T.tolist()[0]))
+
     plt.show()
 
 
 def main():
     data = readFile()
     plotting(data)
+
+    '''
+
     inputA = generateInput(20, 0.0)
     mesA, oriantation = generateOutput(data)
 
@@ -110,6 +144,7 @@ def main():
     plt.plot(X[2, :].tolist()[0])
     plt.plot(Mess.T[0, :].tolist()[0])
     plt.show()
+    '''
 
 
 if (__name__ == '__main__'):

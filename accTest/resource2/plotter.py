@@ -2,7 +2,7 @@ import json
 from matplotlib import pyplot as plt
 
 
-filename = 'datKalmanF2'
+filename = 'dataFF20'
 
 
 def readFromFile():

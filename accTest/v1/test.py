@@ -5,7 +5,7 @@ from matplotlib import pyplot as plt
 
 
 def readFile():
-    fileName = '../resource/data3Out.json'
+    fileName = '../resource2/dataF20.json'
     fileIn = open(fileName, 'r')
     data = json.load(fileIn)
     # print(data)
@@ -19,13 +19,12 @@ def generateInput(data):
     i = 0
     Gyro_A = []
     for dataV in data:
-        if i > 5+42:
-            forwardAccel_v = -1000 * dataV['accel'][1]
-            print(forwardAccel_v)
-            Gyro_A .append(np.radians(dataV['gyro'][2]))
-            inputVal.append(np.matrix([[forwardAccel_v], [steer]]))
-        if i > 160+20+42:
-            break
+
+        forwardAccel_v = 1000 * dataV['accel'][1]
+
+        Gyro_A .append(np.radians(dataV['gyro'][2]))
+        inputVal.append(np.matrix([[forwardAccel_v], [steer]]))
+
         i += 1
 
     return inputVal, Gyro_A
@@ -42,16 +41,16 @@ def plotting(dataA):
 
     i = 0
     for data in dataA:
-        if i > 5+42:
-            accX.append(data['accel'][0]*1000)
-            accY.append(data['accel'][1]*-1000)
-            accZ.append(data['accel'][2]*1000)
+        # if i > 5+42:
+        accX.append(data['accel'][0]*1000)
+        accY.append(data['accel'][1]*1000)
+        accZ.append(data['accel'][2]*1000)
 
-            gyroX.append(np.radians(data['gyro'][0]))
-            gyroY.append(np.radians(data['gyro'][1]))
-            gyroZ.append(np.radians(data['gyro'][2]))
-        if i > 150+10+42:
-            break
+        gyroX.append(np.radians(data['gyro'][0]))
+        gyroY.append(np.radians(data['gyro'][1]))
+        gyroZ.append(np.radians(data['gyro'][2]))
+        # if i > 150+10+42:
+        #     break
         i += 1
 
     plt.figure()
@@ -85,13 +84,27 @@ def main():
     X = rob1.x
     # inputAcc = []
     i = 0
-    for inputV, gyroV in zip(inputValArray, Gyro_A):
+    moving = False
+    forwardSpeed = 0.0
+    speed = 20
+    direction = speed/abs(speed)
 
+    for inputV, gyroV in zip(inputValArray, Gyro_A):
+        print('Acc', inputV[0, 0]*direction)
         rob1.predict(inputV)
-        # if i < 2:
+        if not moving and inputV[0, 0]*direction > 100:
+            forwardSpeed = speed
+            moving = True
+            print("Forward")
+        elif moving and inputV[0, 0]*direction < -100:
+            forwardSpeed = 0.0
+            moving = False
+            print("Brake")
+
         #     rob1.update(np.array([[0.0], [gyroV]]), R=np.matrix([[1**2, 0], [0, 0.0001**2]]))
-        # elif i < 148:
-        #     rob1.update(np.array([[-20.0], [gyroV]]), R=np.matrix([[5**2, 0], [0, 0.0001**2]]))
+
+        rob1.update(np.array([[forwardSpeed], [0.0]]),
+                    R=np.matrix([[2**2, 0], [0, 0.0001**2]]))
         # else:
         #     rob1.update(np.array([[0.0], [gyroV]]), R=np.matrix([[1**2, 0], [0, 0.0001**2]]))
         X_temp = rob1.x
@@ -110,6 +123,7 @@ def main():
     plt.plot(X[4, :].tolist()[0], '--r')
 
     plt.figure()
+    plt.title('Position')
     plt.plot(X[0, :].tolist()[0], X[1, :].tolist()[0], '--r')
     plt.show()
 

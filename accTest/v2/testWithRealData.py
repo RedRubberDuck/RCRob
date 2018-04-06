@@ -5,14 +5,15 @@ from matplotlib import pyplot as plt
 import systemTest
 
 '''
-Player One
-Ragodozo varosok
-Expedocio
+# Player One
+# Ragodozo varosok
+# Expedocio
+*0.430875709375
 '''
 
 
 def readFile():
-    fileName = '../resource2/datKalmanF2.json'
+    fileName = '../resource2/dataFF20.json'
     fileIn = open(fileName, 'r')
     data = json.load(fileIn)
     # print(data)

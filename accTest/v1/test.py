@@ -5,7 +5,7 @@ from matplotlib import pyplot as plt
 
 
 def readFile():
-    fileName = '../resource2/dataF20.json'
+    fileName = '../resource2/dataB20A23.json'
     fileIn = open(fileName, 'r')
     data = json.load(fileIn)
     # print(data)
@@ -15,14 +15,14 @@ def readFile():
 
 def generateInput(data):
     inputVal = []
-    steer = np.radians(0)
+    steer = np.radians(23)
     i = 0
     Gyro_A = []
     for dataV in data:
 
         forwardAccel_v = 1000 * dataV['accel'][1]
 
-        Gyro_A .append(np.radians(dataV['gyro'][2]))
+        Gyro_A .append(dataV['gyro'][2])
         inputVal.append(np.matrix([[forwardAccel_v], [steer]]))
 
         i += 1
@@ -79,14 +79,14 @@ def main():
     wheelbase = 26
 
     rob1 = myKalmanFilter.RobotEKF(dt=timestep, wheelbase=wheelbase,
-                                   std_acc=50.0, std_steer=np.radians(2))
+                                   std_acc=50.0, std_steer=np.radians(1))
 
     X = rob1.x
     # inputAcc = []
     i = 0
     moving = False
     forwardSpeed = 0.0
-    speed = 20
+    speed = -20
     direction = speed/abs(speed)
 
     for inputV, gyroV in zip(inputValArray, Gyro_A):
@@ -103,8 +103,8 @@ def main():
 
         #     rob1.update(np.array([[0.0], [gyroV]]), R=np.matrix([[1**2, 0], [0, 0.0001**2]]))
 
-        rob1.update(np.array([[forwardSpeed], [0.0]]),
-                    R=np.matrix([[2**2, 0], [0, 0.0001**2]]))
+        rob1.update(np.array([[forwardSpeed], [gyroV]]),
+                    R=np.matrix([[2**2, 0], [0, 100**2]]))
         # else:
         #     rob1.update(np.array([[0.0], [gyroV]]), R=np.matrix([[1**2, 0], [0, 0.0001**2]]))
         X_temp = rob1.x
@@ -121,7 +121,8 @@ def main():
     plt.figure()
     plt.title('Angular velocity')
     plt.plot(X[4, :].tolist()[0], '--r')
-
+    plt.plot(Gyro_A, 'g')
+    # print(Gyro_A)
     plt.figure()
     plt.title('Position')
     plt.plot(X[0, :].tolist()[0], X[1, :].tolist()[0], '--r')

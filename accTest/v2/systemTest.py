@@ -15,26 +15,27 @@ from filterpy.kalman import ExtendedKalmanFilter as EKF
 
 
 def systemModelTest():
-    x, y, theta, v, alpha, dt, w = sympy.symbols('x, y, theta, v, alpha,dt,w')
+    x, y, theta, v, alpha, dt, w, dtheta = sympy.symbols('x, y, theta, v, alpha, dt, w, dtheta')
 
-    dtheta = v/w*sympy.tan(alpha)*dt
+    # dtheta = v/w*sympy.tan(alpha)
     f_xu = sympy.Matrix([[x+dt*v*sympy.cos(theta)],  # position
                          [y+dt*v*sympy.sin(theta)],  # position
-                         [theta+dtheta]])  # orianntation
+                         [theta+dtheta*dt],          # orianntation
+                         [v/w*sympy.tan(alpha)]])                  # oriantation
 
     print("State transition function", f_xu)
 
-    F_x = f_xu.jacobian(sympy.Matrix([x, y, theta]))
+    F_x = f_xu.jacobian(sympy.Matrix([x, y, theta, dtheta]))
     F_u = f_xu.jacobian(sympy.Matrix([v, alpha]))
 
     print("F_x", F_x)
     print("F_u", F_u)
     subs = {x: 0, y: 0, theta: np.radians(
-        0), v: 0.2, alpha: np.radians(20), dt: 0.02, w: 0.26}
+        0), dtheta: 0.0, v: 0.2, alpha: np.radians(20), dt: 0.02, w: 0.26}
 
     States = None
     States_Lin = None
-    prevX = np.matrix([[subs[x]], [subs[y]], [subs[theta]]], dtype=np.float)
+    prevX = np.matrix([[subs[x]], [subs[y]], [subs[theta]], [subs[dtheta]]], dtype=np.float)
     curX = prevX
     prevU = np.matrix([[0], [subs[alpha]]])
     curU = np.matrix([[subs[v]], [subs[alpha]]])
@@ -44,7 +45,7 @@ def systemModelTest():
 
     rob1 = RobotEKF(wheelbase=0.26, dt=0.02,
                     std_v=0.1, std_alpha=np.radians(1))
-
+    #
     States_Sim = rob1.x
 
     for i in range(200):
@@ -62,6 +63,7 @@ def systemModelTest():
         subs[x] = X[0, 0]
         subs[y] = X[1, 0]
         subs[theta] = X[2, 0]
+        subs[dtheta] = X[3, 0]
 
         dX = curX - prevX
         dU = curU - prevU
@@ -85,10 +87,19 @@ def systemModelTest():
     plt.plot(States[2, :].tolist()[0])
     plt.plot(States_Lin[2, :].tolist()[0])
     plt.plot(States_Sim[2, :].tolist()[0])
+    plt.title('Oriantation')
+    # --------------------------------------------------------------------------
     plt.figure()
     plt.plot(States[0, :].tolist()[0], States[1, :].tolist()[0])
     plt.plot(States_Lin[0, :].tolist()[0], States_Lin[1, :].tolist()[0])
     plt.plot(States_Sim[0, :].tolist()[0], States_Sim[1, :].tolist()[0])
+    plt.title('Position')
+    # --------------------------------------------------------------------------
+    plt.figure()
+    plt.plot(States_Lin[3, :].tolist()[0])
+    plt.plot(States[3, :].tolist()[0])
+    plt.plot(States_Sim[3, :].tolist()[0])
+    plt.title('Angle velocity')
     plt.show()
 
 
@@ -97,7 +108,7 @@ class RobotEKF(EKF):
     #  @param wheelbase     =   the robot wheelbase
     #  @param dt            =   the timestep of the simulation
     def __init__(self, wheelbase, dt, std_v, std_alpha):
-        super(RobotEKF, self).__init__(3, 1, 2)
+        super(RobotEKF, self).__init__(4, 1, 2)
         self.__w = wheelbase
         self.__dt = dt
 
@@ -107,10 +118,13 @@ class RobotEKF(EKF):
     # @param  x             =   the robot initial state
     # @param  u             =   the system model input parameters
     def move(self, x, u):
+        dtheta = x[3, 0]
+        x[3, 0] = 0.0
         return x + np.matrix([
             [u[0, 0]*self.__dt*np.cos(x[2, 0])],
             [u[0, 0]*self.__dt*np.sin(x[2, 0])],
-            [u[0, 0]/self.__w*self.__dt*np.tan(u[1, 0])]
+            [dtheta*self.__dt],
+            [u[0, 0]/self.__w*np.tan(u[1, 0])]
         ])
 
     # Predict the state of the robot
@@ -126,18 +140,19 @@ class RobotEKF(EKF):
             np.dot(F_u, self.M).dot(F_u.T)
 
     def update(self, mes, R):
-        print('X1', self.x)
+        # print('X1', self.x)
         super(RobotEKF, self).update(z=mes, HJacobian=self.H_x, Hx=self.h, R=R)
-        print('X2', self.x)
+        # print('X2', self.x)
 
     # Jacobian matrix of the transition function
     # @param  x             =   the state of the robot
     # @param  u             =   the input of the robot
     def F_x(self, x, u):
         return np.matrix([
-            [1.0, 0.0, -self.__dt*u[0, 0]*np.sin(x[2, 0])],
-            [0.0, 1.0, self.__dt*u[0, 0]*np.cos(x[2, 0])],
-            [0.0, 0.0, 1.0]
+            [1.0, 0.0, -self.__dt*u[0, 0]*np.sin(x[2, 0]), 0.0],
+            [0.0, 1.0, self.__dt*u[0, 0]*np.cos(x[2, 0]), 0.0],
+            [0.0, 0.0, 1.0, self.__dt],
+            [0.0, 0.0, 0.0, 0.0]
         ])
 
     # Jcobian matrix of the transition function
@@ -147,16 +162,17 @@ class RobotEKF(EKF):
         return np.matrix([
             [self.__dt*np.cos(x[2, 0]), 0.0],
             [self.__dt*np.sin(x[2, 0]), 0.0],
-            [self.__dt*np.tan(u[1, 0])/self.__w, self.__dt *
+            [0.0, 0.0],
+            [np.tan(u[1, 0])/self.__w,
              u[0, 0]*(np.tan(u[1, 0])**2+1)/self.__w]
         ])
 
     def h(self, x):
-        return x[2, 0]
+        return x[3, 0]
         # return x.copy()
 
     def H_x(self, x):
-        return np.matrix([[0, 0, 1]])
+        return np.matrix([[0.0, 0.0, 0.0, 1.0]])
         # return np.matrix([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
 
 

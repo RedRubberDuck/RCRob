@@ -13,7 +13,7 @@ import systemTest
 
 
 def readFile():
-    fileName = '../resource2/dataFF20.json'
+    fileName = '../resource2/dataF20.json'
     fileIn = open(fileName, 'r')
     data = json.load(fileIn)
     # print(data)
@@ -36,19 +36,25 @@ def generateOutput(dataA):
 
     i = 0
     Mes = None
+    Acc = None
     for dataV in dataA:
-        mesV = dataV['fusionPose'][2]
+        gyro_mess_v = dataV['gyro'][2]
+        acc_mess_v = dataV['accel'][1]
+
         if(i == 0):
-            oriantation = mesV
-            Mes = np.matrix([[mesV]])
-            s = 0
+            # oriantation = mesV
+            Mes = np.matrix([[gyro_mess_v]])
+            Acc = np.matrix([[acc_mess_v]])
         else:
-            Mes = np.concatenate((Mes, np.matrix([[mesV]])), axis=0)
-            s = 0
+            Mes = np.concatenate((Mes, np.matrix([[gyro_mess_v]])), axis=0)
+            Acc = np.concatenate((Acc, np.matrix([[acc_mess_v]])), axis=0)
         i += 1
+    plt.figure()
     plt.plot(Mes.T[0, :].tolist()[0])
+    plt.figure()
+    plt.plot(Acc.T[0, :].tolist()[0])
     plt.show()
-    return Mes, oriantation
+    return Mes, Acc
 
 
 def plotting(dataA):
@@ -113,39 +119,101 @@ def plotting(dataA):
     plt.show()
 
 
+def gyroStd(dataA):
+    s = 0
+
+    gyroA = []
+    for dataV in dataA:
+        gyro = dataV['gyro'][2]
+        gyroA.append(gyro)
+
+    stdGyro = np.std(gyroA)
+    print('Std gyro:', stdGyro)
+
+    # 0.0163053788053
+    # 0.0131544971098
+    # 0.013447431677
+    # 0.0200003859432
+    # 0.024478928753
+
+    # plt.plot(gyroA)
+    # plt.show()
+
+
 def main():
     data = readFile()
-    plotting(data)
-
-    '''
+    gyroStd(data)
+    # plotting(data)
 
     inputA = generateInput(20, 0.0)
-    mesA, oriantation = generateOutput(data)
+    mesA, AccA = generateOutput(data)
 
     rob1 = systemTest.RobotEKF(
-        wheelbase=0.26, dt=0.02, std_v=0.01, std_alpha=np.radians(0.9))
+        wheelbase=0.26, dt=0.02, std_v=0.01, std_alpha=np.radians(3))
 
-    rob1.P = np.matrix([[0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]])
-    rob1.x = np.matrix([[0.0], [0.0], [oriantation]])
+    rob1.P = np.matrix([[0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0],
+                        [0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0]])
+    rob1.x = np.matrix([[0.0], [0.0], [0.0], [0.0]])
+
+    rob2 = systemTest.RobotEKF(
+        wheelbase=0.26, dt=0.02, std_v=0.05, std_alpha=np.radians(1))
+
+    rob2.P = np.matrix([[0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0],
+                        [0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0]])
+    rob2.x = np.matrix([[0.0], [0.0], [0.0], [0.0]])
+
     X = rob1.x.copy()
+    X_sim = rob1.x.copy()
+    #
 
-    for U, Mess in zip(inputA, mesA):
-        rob1.predict(U.T)
-        # curX = rob1.x
-        # # curX[2, 0] = Mess
-        # print('SSS', curX, Mess)
-        # rob1.update(Mess.T, R=np.matrix([[np.radians(10)**2]]))
-        # [[0.03**2*2, 0, 0], [0, 0.03**2*2, 0], [0, 0, np.radians(10)**2]]))
+    speed = -0.2
+    direction = speed/abs(speed)
+
+    forwardSpeed = 0
+    moving = False
+    steer = np.radians(0.0)
+
+    index = 0
+
+    startIndex = 0
+    endIndex = 0
+    for Mess, Acc in zip(mesA, AccA):
+        if not moving and Acc[0, 0]*direction > 0.2:
+            forwardSpeed = speed
+            moving = True
+            startIndex = index
+            print("Forward")
+        elif moving and Acc[0, 0]*direction < -0.15:
+            forwardSpeed = 0.0001
+            moving = False
+            endIndex = index
+            print("Brake")
+        U = np.matrix([[forwardSpeed+np.random.normal(loc=0.0, scale=0.01)],
+                       [steer+np.random.normal(loc=0.0, scale=np.radians(3.0))]])
+        # print(U)
+        rob1.predict(U)
+        rob2.predict(U)
+    #     # curX = rob1.x
+    #     # # curX[2, 0] = Mess
+    #     # print('SSS', curX, Mess)
+    #      0.0131544971098
+        rob1.update(Mess.T, R=np.matrix([[(0.0231544971098)**2]]))
+    #     # [[0.03**2*2, 0, 0], [0, 0.03**2*2, 0], [0, 0, np.radians(10)**2]]))
         X = np.concatenate((X, rob1.x.copy()), axis=1)
+        X_sim = np.concatenate((X_sim, rob2.x.copy()), axis=1)
+        index += 1
 
+    print('Duration', (endIndex - startIndex)*0.02, (endIndex - startIndex))
     plt.figure()
     plt.plot(X[0, :].tolist()[0], X[1, :].tolist()[0])
-    # plt.plot(Outputs[0, :].tolist()[0], Outputs[1, :].tolist()[0])
+    plt.plot(X_sim[0, :].tolist()[0], X_sim[1, :].tolist()[0])
+    plt.legend(['Filtered', 'Simulated'])
     plt.figure()
-    plt.plot(X[2, :].tolist()[0])
-    plt.plot(Mess.T[0, :].tolist()[0])
+    plt.plot(X[3, :].tolist()[0], 'r')
+    plt.plot(mesA.T[0, :].tolist()[0], '--g')
+    plt.plot(X_sim[3, :].tolist()[0], '--b')
+    plt.legend(['Filtered', 'Mess', 'Simulated'])
     plt.show()
-    '''
 
 
 if (__name__ == '__main__'):

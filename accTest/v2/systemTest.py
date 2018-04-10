@@ -15,7 +15,8 @@ from filterpy.kalman import ExtendedKalmanFilter as EKF
 
 
 def systemModelTest():
-    x, y, theta, v, alpha, dt, w, dtheta = sympy.symbols('x, y, theta, v, alpha, dt, w, dtheta')
+    x, y, theta, v, alpha, dt, w, dtheta = sympy.symbols(
+        'x, y, theta, v, alpha, dt, w, dtheta')
 
     # dtheta = v/w*sympy.tan(alpha)
     f_xu = sympy.Matrix([[x+dt*v*sympy.cos(theta)],  # position
@@ -35,7 +36,8 @@ def systemModelTest():
 
     States = None
     States_Lin = None
-    prevX = np.matrix([[subs[x]], [subs[y]], [subs[theta]], [subs[dtheta]]], dtype=np.float)
+    prevX = np.matrix([[subs[x]], [subs[y]], [subs[theta]],
+                       [subs[dtheta]]], dtype=np.float)
     curX = prevX
     prevU = np.matrix([[0], [subs[alpha]]])
     curU = np.matrix([[subs[v]], [subs[alpha]]])
@@ -130,12 +132,12 @@ class RobotEKF(EKF):
     # Predict the state of the robot
     # @param  u             =   the input of the system model
     def predict(self, u):
-        newX = self.move(self.x, u)
+        self.x = newX = self.move(self.x, u)
 
         F_x = self.F_x(self.x, u)
         F_u = self.F_u(self.x, u)
 
-        self.x = newX
+        # self.x = newX
         self.P = np.dot(F_x, self.P).dot(F_x.T) + \
             np.dot(F_u, self.M).dot(F_u.T)
 

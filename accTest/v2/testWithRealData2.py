@@ -2,7 +2,8 @@ import json
 import numpy as np
 from matplotlib import pyplot as plt
 
-import systemTest
+# import systemTest
+import RobotEKF
 
 '''
 # Player One
@@ -34,6 +35,8 @@ def generateInput(vel, steer):
 def generateInputAndOutput(steer, direction, dataA):
     s = 0
 
+    steer *= -1
+
     i = 0
     Mes = None
     Acc = None
@@ -54,11 +57,12 @@ def generateInputAndOutput(steer, direction, dataA):
         #     vel = 0.0
         if(i == 0):
             # oriantation = mesV
-            Mes = np.matrix([[gyro_mess_v]])
+            Mes = np.matrix([[gyro_mess_v*-1.0]])
             Acc = np.matrix([[acc_mess_v]])
             inputA = np.matrix([[vel/100.0*direction*1.0, steer]])
         else:
-            Mes = np.concatenate((Mes, np.matrix([[gyro_mess_v]])), axis=0)
+            Mes = np.concatenate(
+                (Mes, np.matrix([[gyro_mess_v*-1.0]])), axis=0)
             Acc = np.concatenate((Acc, np.matrix([[acc_mess_v]])), axis=0)
             inputA = np.concatenate(
                 (inputA, np.matrix([[vel/100.0*direction*1.0, steer]])), axis=0)
@@ -104,16 +108,16 @@ def main():
     # plotting(data)
     direction = 1.0
     mesA, AccA, inputA = generateInputAndOutput(
-        np.radians(23.0), direction, data)
+        np.radians(0.0), direction, data)
 
-    rob1 = systemTest.RobotEKF(
+    rob1 = RobotEKF.RobotEKF(
         wheelbase=0.265, dt=0.05, std_v=0.001, std_alpha=np.radians(3))
 
     rob1.P = np.matrix([[0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0],
                         [0.0, 0.0, np.radians(10), 0.0], [0.0, 0.0, 0.0, 0.0]])
     rob1.x = np.matrix([[0.0], [0.0], [0.0], [0.0]])
 
-    rob2 = systemTest.RobotEKF(
+    rob2 = RobotEKF.RobotEKF(
         wheelbase=0.265, dt=0.05, std_v=0.05, std_alpha=np.radians(1))
 
     rob2.P = np.matrix([[0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0],
@@ -132,7 +136,7 @@ def main():
         # #     # # curX[2, 0] = Mess
         # #     # print('SSS', curX, Mess)
         # #      0.0131544971098
-        rob1.update(Mess.T, R=np.matrix([[np.radians(2)**2]]))
+        rob1.update(Mess.T, R=np.matrix([[np.radians(2.5)**2]]))
         # #     # [[0.03**2*2, 0, 0], [0, 0.03**2*2, 0], [0, 0, np.radians(10)**2]]))
         X = np.concatenate((X, rob1.x.copy()), axis=1)
         X_sim = np.concatenate((X_sim, rob2.x.copy()), axis=1)

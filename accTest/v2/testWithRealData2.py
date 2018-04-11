@@ -48,6 +48,10 @@ def generateInputAndOutput(steer, direction, dataA):
         print('Dur:', (timestampCC - timestamp))
         timestamp = timestampCC
 
+        if vel != 0.0:
+            vel = 20
+        else:
+            vel = 0.0
         if(i == 0):
             # oriantation = mesV
             Mes = np.matrix([[gyro_mess_v]])
@@ -103,7 +107,7 @@ def main():
         np.radians(23.0), direction, data)
 
     rob1 = systemTest.RobotEKF(
-        wheelbase=0.265, dt=0.05, std_v=0.01, std_alpha=np.radians(2))
+        wheelbase=0.265, dt=0.05, std_v=0.001, std_alpha=np.radians(2))
 
     rob1.P = np.matrix([[0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0],
                         [0.0, 0.0, np.radians(10), 0.0], [0.0, 0.0, 0.0, 0.0]])

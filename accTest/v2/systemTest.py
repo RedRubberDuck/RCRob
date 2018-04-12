@@ -170,12 +170,16 @@ class RobotEKF(EKF):
         ])
 
     def h(self, x):
-        return x[3, 0]
+        return x
         # return x.copy()
 
     def H_x(self, x):
-        return np.matrix([[0.0, 0.0, 0.0, 1.0]])
-        # return np.matrix([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
+        return np.matrix([
+            [1.0, 0.0, 0.0, 0.0],
+            [0.0, 1.0, 0.0, 0.0],
+            [0.0, 0.0, 1.0, 0.0],
+            [0.0, 0.0, 0.0, 1.0]
+        ])
 
 
 if __name__ == "__main__":

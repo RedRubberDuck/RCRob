@@ -1,4 +1,4 @@
-import RobotEKF
+import systemTest
 import numpy as np
 
 
@@ -8,7 +8,7 @@ from matplotlib import pyplot as plt
 def generateRefence(std_v, std_alpha, std_px, std_py, std_theta, std_dtheta):
     #  std_x, std_y,
     s = 0
-    rob1 = RobotEKF.RobotEKF(
+    rob1 = systemTest.RobotEKF(
         wheelbase=0.265, dt=0.05, std_v=0.1, std_alpha=0.1)
     u = np.matrix([[0.2], [np.radians(23)]])
     Outputs = rob1.h(rob1.x)
@@ -90,7 +90,7 @@ def testFilter():
     Outputs, Inputs, Outputs_err, Inputs_err = generateRefence(
         std_v=0.05, std_alpha=np.radians(0.0), std_px=0.1, std_py=0.1, std_theta=np.radians(10.0), std_dtheta=np.radians(1.0))
 
-    rob_flt = RobotEKF.RobotEKF(
+    rob_flt = systemTest.RobotEKF(
         wheelbase=0.265, dt=0.05, std_v=0.01, std_alpha=np.radians(2.0))
     rob_flt.P = np.matrix([[0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0],
                            [0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0]])
@@ -99,11 +99,11 @@ def testFilter():
     X_SimErr = rob_flt.x.copy()
     X_non = rob_flt.x.copy()
 
-    rob2 = RobotEKF.RobotEKF(wheelbase=0.265, dt=0.05, std_v=1, std_alpha=np.radians(1))
+    rob2 = systemTest.RobotEKF(wheelbase=0.265, dt=0.05, std_v=1, std_alpha=np.radians(1))
     rob2.P = rob_flt.P.copy()
     rob2.x = rob_flt.x.copy()
 
-    rob = RobotEKF.RobotEKF(wheelbase=0.265, dt=0.05, std_v=1, std_alpha=np.radians(1))
+    rob = systemTest.RobotEKF(wheelbase=0.265, dt=0.05, std_v=1, std_alpha=np.radians(1))
     rob.P = rob_flt.P.copy()
     rob.x = rob_flt.x.copy()
 

@@ -12,12 +12,11 @@ class RobotEKF(EKF):
     #  @param wheelbase     =   the robot wheelbase
     #  @param dt            =   the timestep of the simulation
     def __init__(self, wheelbase, dt, std_v, std_alpha):
-        super(RobotEKF, self).__init__(4, 4, 2)
+        super(RobotEKF, self).__init__(4, 1, 2)
         self.__w = wheelbase
         self.__dt = dt
 
-        self.M = np.matrix([[0.05, 0, 0, 0], [0, 0.05, 0, 0], [
-                           0, 0, std_v**2, 0], [0, 0, 0, std_alpha**2]])
+        self.M = np.matrix([[std_v**2, 0], [0, std_alpha**2]])
 
     # Simulate the robot move
     # @param  x             =   the robot initial state
@@ -65,19 +64,19 @@ class RobotEKF(EKF):
     # @param  u             =   the input of the robot
     def F_u(self, x, u):
         return np.matrix([
-            [0.0, 0.0, self.__dt*np.cos(x[2, 0]), 0.0],
-            [0.0, 0.0, self.__dt*np.sin(x[2, 0]), 0.0],
-            [0.0, 0.0, 0.0, 0.0],
-            [0.0, 0.0, np.tan(u[1, 0])/self.__w,
+            [self.__dt*np.cos(x[2, 0]), 0.0],
+            [self.__dt*np.sin(x[2, 0]), 0.0],
+            [0.0, 0.0],
+            [np.tan(u[1, 0])/self.__w,
              u[0, 0]*(np.tan(u[1, 0])**2+1)/self.__w]
         ])
 
     def h(self, x):
-        # return x[3, 0]
-        return x.copy()
+        return x[3, 0]
+        # return x.copy()
 
     def H_x(self, x):
-        return np.matrix([[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0], [0.0, 0.0, 0.0, 1.0]])
+        return np.matrix([[0.0, 0.0, 0.0, 1.0]])
         # return np.matrix([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
 
     def robPosition(self):
